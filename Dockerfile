@@ -3,7 +3,8 @@ FROM node:20-slim AS base
 RUN apt-get update \
   && apt-get install -y --no-install-recommends ffmpeg openssl ca-certificates \
   && rm -rf /var/lib/apt/lists/* \
-  && corepack enable
+  && corepack enable \
+  && corepack prepare pnpm@9.15.9 --activate
 
 WORKDIR /app
 
