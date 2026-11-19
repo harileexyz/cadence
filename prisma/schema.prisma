@@ -1,0 +1,147 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum PlanTier {
+  FREE
+  PRO
+}
+
+enum Platform {
+  YOUTUBE
+  INSTAGRAM
+}
+
+enum PostStatus {
+  DRAFT
+  SCHEDULED
+  PROCESSING
+  PUBLISHED
+  PARTIAL_FAILURE
+  FAILED
+}
+
+enum TargetStatus {
+  PENDING
+  PROCESSING
+  PUBLISHED
+  FAILED
+}
+
+model User {
+  id                   String          @id @default(cuid())
+  email                String          @unique
+  name                 String
+  passwordHash         String
+  plan                 PlanTier        @default(FREE)
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+  sessions             Session[]
+  socialAccounts       SocialAccount[]
+  mediaAssets          MediaAsset[]
+  posts                Post[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model SocialAccount {
+  id                    String       @id @default(cuid())
+  userId                String
+  platform              Platform
+  externalAccountId     String
+  displayName           String
+  username              String?
+  avatarUrl             String?
+  accessTokenEncrypted  String
+  refreshTokenEncrypted String?
+  tokenExpiresAt        DateTime?
+  metadata              Json?
+  isActive              Boolean      @default(true)
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+  user                  User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  targets               PostTarget[]
+
+  @@unique([userId, platform, externalAccountId])
+  @@index([userId])
+}
+
+model MediaAsset {
+  id             String      @id @default(cuid())
+  userId         String
+  filename       String
+  mimeType       String
+  sizeBytes      Int
+  width          Int?
+  height         Int?
+  durationSec    Float?
+  storageKey     String      @unique
+  publicUrl      String
+  storageDeleted Boolean     @default(false)
+  createdAt      DateTime    @default(now())
+  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  posts          PostMedia[]
+
+  @@index([userId])
+}
+
+model Post {
+  id          String       @id @default(cuid())
+  userId      String
+  title       String?
+  baseCaption String
+  scheduledAt DateTime?
+  status      PostStatus   @default(DRAFT)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  media       PostMedia[]
+  targets     PostTarget[]
+
+  @@index([userId, createdAt])
+}
+
+model PostMedia {
+  id           String     @id @default(cuid())
+  postId       String
+  mediaAssetId String
+  orderIndex   Int        @default(0)
+  post         Post       @relation(fields: [postId], references: [id], onDelete: Cascade)
+  mediaAsset   MediaAsset @relation(fields: [mediaAssetId], references: [id], onDelete: Cascade)
+}
+
+model PostTarget {
+  id              String        @id @default(cuid())
+  postId          String
+  accountId       String
+  customTitle     String?
+  customCaption   String?
+  platformOptions Json?
+  status          TargetStatus  @default(PENDING)
+  externalPostId  String?
+  externalPostUrl String?
+  errorMessage    String?
+  retryCount      Int           @default(0)
+  nextRetryAt     DateTime?
+  publishedAt     DateTime?
+  post            Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  account         SocialAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([status, nextRetryAt])
+}
