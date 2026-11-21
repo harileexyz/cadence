@@ -22,6 +22,7 @@ import {
   X,
   Youtube,
 } from "lucide-react";
+import { OnboardingChecklist } from "@/components/OnboardingChecklist";
 import { PlatformBadge } from "@/components/PlatformBadge";
 
 interface MediaAssetDTO {
@@ -294,6 +295,9 @@ export default function QueuePage() {
           <span>Refresh</span>
         </button>
       </div>
+
+      {/* Interactive Getting-Started Onboarding Checklist (dismissible) */}
+      <OnboardingChecklist postsCount={posts.length} />
 
       {/* SaaS Overview Metrics & Getting Started Checklist */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">

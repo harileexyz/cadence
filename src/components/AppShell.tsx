@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import {
   BarChart3,
+  BookOpen,
   CalendarClock,
   CreditCard,
   Layers,
@@ -43,6 +44,7 @@ const WORKSPACE_NAV = [
 ];
 
 const ACCOUNT_NAV = [
+  { href: "/guide", label: "Help & Guide", icon: BookOpen },
   { href: "/pricing", label: "Plan & Billing", icon: CreditCard },
   { href: "/profile", label: "Profile & Settings", icon: UserCircle2 },
 ];
@@ -117,6 +119,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </Link>
 
               <nav className="hidden items-center gap-5 text-sm font-medium text-slate-600 md:flex">
+                <Link href="/guide" className="hover:text-slate-900">
+                  Guide
+                </Link>
                 <Link href="/pricing" className="hover:text-slate-900">
                   Pricing
                 </Link>
@@ -357,6 +362,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </Link>
 
           <div className="flex items-center gap-2">
+            <Link
+              href="/guide"
+              title="Help & Guide"
+              className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-slate-600 hover:bg-indigo-50 hover:text-indigo-700"
+            >
+              <BookOpen className="h-4 w-4" />
+            </Link>
             {usage && (
               <Link
                 href="/pricing"
