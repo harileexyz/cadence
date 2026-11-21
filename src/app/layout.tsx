@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Footer } from "@/components/Footer";
-import { NavBar } from "@/components/NavBar";
+import { AppShell } from "@/components/AppShell";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -28,12 +27,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="flex min-h-screen flex-col overflow-x-hidden antialiased">
-        <NavBar />
-        <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 pb-24 sm:px-6 md:py-8 md:pb-8">
-          {children}
-        </main>
-        <Footer />
+      <body className="min-h-screen overflow-x-hidden antialiased">
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   );
