@@ -12,6 +12,7 @@ import {
   PenSquare,
   ShieldCheck,
   Sparkles,
+  UserCircle2,
   Users,
 } from "lucide-react";
 
@@ -34,11 +35,19 @@ interface UserMeResponse {
 }
 
 const AUTH_NAV_ITEMS = [
-  { href: "/", label: "Queue", mobileLabel: "Queue", icon: CalendarClock },
-  { href: "/compose", label: "Compose", mobileLabel: "Post", icon: PenSquare },
-  { href: "/engagement", label: "Engagement", mobileLabel: "Stats", icon: BarChart3 },
-  { href: "/accounts", label: "Channels", mobileLabel: "Channels", icon: Users },
-  { href: "/pricing", label: "Plan & Billing", mobileLabel: "Plan", icon: CreditCard },
+  { href: "/", label: "Queue", icon: CalendarClock },
+  { href: "/compose", label: "Compose", icon: PenSquare },
+  { href: "/engagement", label: "Engagement", icon: BarChart3 },
+  { href: "/accounts", label: "Channels", icon: Users },
+  { href: "/pricing", label: "Plan & Billing", icon: CreditCard },
+];
+
+const MOBILE_TAB_ITEMS = [
+  { href: "/", label: "Queue", icon: CalendarClock },
+  { href: "/compose", label: "Post", icon: PenSquare },
+  { href: "/engagement", label: "Stats", icon: BarChart3 },
+  { href: "/accounts", label: "Channels", icon: Users },
+  { href: "/profile", label: "Profile", icon: UserCircle2 },
 ];
 
 export function NavBar() {
@@ -176,11 +185,28 @@ export function NavBar() {
                   <span>New Post</span>
                 </Link>
 
+                <Link
+                  href="/profile"
+                  title={`Profile (${user.email})`}
+                  className={`inline-flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold transition ${
+                    pathname.startsWith("/profile")
+                      ? "bg-indigo-600 text-white ring-2 ring-indigo-200"
+                      : "bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
+                  }`}
+                >
+                  {user.name
+                    .split(" ")
+                    .map((p) => p[0])
+                    .join("")
+                    .slice(0, 2)
+                    .toUpperCase() || "U"}
+                </Link>
+
                 <button
                   type="button"
                   title={`Signed in as ${user.email} — Log out`}
                   onClick={() => void handleLogout()}
-                  className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                  className="hidden h-9 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 sm:inline-flex"
                 >
                   <LogOut className="h-4 w-4" />
                   <span className="hidden lg:inline">Log out</span>
@@ -213,7 +239,7 @@ export function NavBar() {
           className="safe-area-pb fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur md:hidden"
         >
           <div className="grid h-16 grid-cols-5">
-            {AUTH_NAV_ITEMS.map((item) => {
+            {MOBILE_TAB_ITEMS.map((item) => {
               const Icon = item.icon;
               const isActive =
                 item.href === "/"
@@ -237,7 +263,7 @@ export function NavBar() {
                   >
                     <Icon className="h-5 w-5" />
                   </span>
-                  <span>{item.mobileLabel}</span>
+                  <span>{item.label}</span>
                 </Link>
               );
             })}
