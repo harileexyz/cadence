@@ -38,6 +38,26 @@ export interface ChannelEngagementDTO {
   error?: string;
 }
 
+export interface CrossPostLinkDTO {
+  postId: string;
+  title: string | null;
+  youtubeExternalId: string;
+  instagramExternalId: string;
+}
+
+export interface CrossPlatformPair {
+  id: string;
+  title: string;
+  thumbnailUrl: string | null;
+  publishedAt: string;
+  matchType: "cadence" | "auto";
+  youtube: PostEngagementDTO;
+  instagram: PostEngagementDTO;
+  combinedLikes: number;
+  combinedComments: number;
+  ytEngagementShare: number;
+}
+
 export interface EngagementResponse {
   totals: {
     totalFollowers: number;
@@ -49,6 +69,7 @@ export interface EngagementResponse {
   channels: ChannelEngagementDTO[];
   recentPosts: PostEngagementDTO[];
   recentComments: CommentDTO[];
+  crossPostLinks?: CrossPostLinkDTO[];
   fetchedAt: string;
 }
 
@@ -202,4 +223,150 @@ export function formatRelativeDate(iso: string): string {
   if (diffDays < 7) return `${diffDays}d ago`;
   if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
   return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+function normalizeTitleTokens(raw: string): { normalized: string; tokens: Set<string> } {
+  const cleaned = raw
+    .toLowerCase()
+    .replace(/#[a-z0-9_]+/g, " ")
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  const stopWords = new Set([
+    "the",
+    "and",
+    "for",
+    "with",
+    "this",
+    "that",
+    "from",
+    "into",
+    "your",
+    "what",
+    "when",
+    "how",
+    "why",
+    "shorts",
+    "reels",
+    "video",
+  ]);
+
+  const tokens = new Set(
+    cleaned
+      .split(" ")
+      .filter((w) => w.length >= 3 && !stopWords.has(w))
+  );
+
+  return { normalized: cleaned, tokens };
+}
+
+function titleSimilarity(a: string, b: string): number {
+  const na = normalizeTitleTokens(a);
+  const nb = normalizeTitleTokens(b);
+
+  if (na.normalized.length >= 12 && nb.normalized.length >= 12) {
+    if (
+      na.normalized.includes(nb.normalized.slice(0, 18)) ||
+      nb.normalized.includes(na.normalized.slice(0, 18))
+    ) {
+      return 0.9;
+    }
+  }
+
+  if (na.tokens.size === 0 || nb.tokens.size === 0) return 0;
+
+  let overlap = 0;
+  for (const t of na.tokens) {
+    if (nb.tokens.has(t)) overlap++;
+  }
+  const union = new Set([...na.tokens, ...nb.tokens]).size;
+  return union > 0 ? overlap / union : 0;
+}
+
+export function matchCrossPostedPairs(
+  posts: PostEngagementDTO[],
+  crossPostLinks: CrossPostLinkDTO[] = []
+): CrossPlatformPair[] {
+  const ytPosts = posts.filter((p) => p.platform === "YOUTUBE");
+  const igPosts = posts.filter((p) => p.platform === "INSTAGRAM");
+  if (ytPosts.length === 0 || igPosts.length === 0) return [];
+
+  const ytById = new Map(ytPosts.map((p) => [p.id, p]));
+  const igById = new Map(igPosts.map((p) => [p.id, p]));
+  const usedYt = new Set<string>();
+  const usedIg = new Set<string>();
+  const pairs: CrossPlatformPair[] = [];
+
+  const buildPair = (
+    id: string,
+    yt: PostEngagementDTO,
+    ig: PostEngagementDTO,
+    matchType: "cadence" | "auto",
+    explicitTitle?: string | null
+  ): CrossPlatformPair => {
+    const ytEng = yt.likes + yt.comments;
+    const igEng = ig.likes + ig.comments;
+    const totalEng = ytEng + igEng;
+    return {
+      id,
+      title: explicitTitle || yt.title || ig.title,
+      thumbnailUrl: yt.thumbnailUrl || ig.thumbnailUrl,
+      publishedAt:
+        new Date(yt.publishedAt).getTime() >= new Date(ig.publishedAt).getTime()
+          ? yt.publishedAt
+          : ig.publishedAt,
+      matchType,
+      youtube: yt,
+      instagram: ig,
+      combinedLikes: yt.likes + ig.likes,
+      combinedComments: yt.comments + ig.comments,
+      ytEngagementShare:
+        totalEng > 0 ? Math.round((ytEng / totalEng) * 100) : 50,
+    };
+  };
+
+  // 1. Exact Cadence cross-post links
+  for (const link of crossPostLinks) {
+    const yt = ytById.get(link.youtubeExternalId);
+    const ig = igById.get(link.instagramExternalId);
+    if (yt && ig && !usedYt.has(yt.id) && !usedIg.has(ig.id)) {
+      usedYt.add(yt.id);
+      usedIg.add(ig.id);
+      pairs.push(buildPair(`cad-${link.postId}`, yt, ig, "cadence", link.title));
+    }
+  }
+
+  // 2. Smart fuzzy title + 10-day window matching for manually cross-posted videos
+  const MAX_DIFF_MS = 10 * 24 * 60 * 60 * 1000;
+  for (const yt of ytPosts) {
+    if (usedYt.has(yt.id)) continue;
+    const ytTime = new Date(yt.publishedAt).getTime();
+
+    let bestIg: PostEngagementDTO | null = null;
+    let bestScore = 0;
+
+    for (const ig of igPosts) {
+      if (usedIg.has(ig.id)) continue;
+      const igTime = new Date(ig.publishedAt).getTime();
+      if (Math.abs(ytTime - igTime) > MAX_DIFF_MS) continue;
+
+      const score = titleSimilarity(yt.title, ig.title);
+      if (score >= 0.35 && score > bestScore) {
+        bestScore = score;
+        bestIg = ig;
+      }
+    }
+
+    if (bestIg) {
+      usedYt.add(yt.id);
+      usedIg.add(bestIg.id);
+      pairs.push(buildPair(`auto-${yt.id}-${bestIg.id}`, yt, bestIg, "auto"));
+    }
+  }
+
+  return pairs.sort(
+    (a, b) =>
+      new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
+  );
 }

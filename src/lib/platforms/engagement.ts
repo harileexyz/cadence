@@ -377,3 +377,65 @@ export async function fetchInstagramEngagement(
     };
   }
 }
+
+export async function replyToYouTubeComment(
+  accessToken: string,
+  parentCommentId: string,
+  text: string,
+  fetchFn: typeof fetch = fetch
+): Promise<{ replyId: string }> {
+  const res = await fetchFn(`${YOUTUBE_API_BASE}/comments?part=snippet`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      snippet: {
+        parentId: parentCommentId,
+        textOriginal: text,
+      },
+    }),
+  });
+
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`YouTube reply failed (${res.status}): ${body.slice(0, 180)}`);
+  }
+
+  const data = (await res.json()) as { id?: string };
+  return { replyId: data.id || `yt-reply-${Date.now()}` };
+}
+
+export async function replyToInstagramComment(
+  account: SocialAccount,
+  accessToken: string,
+  commentId: string,
+  text: string,
+  fetchFn: typeof fetch = fetch
+): Promise<{ replyId: string }> {
+  const graphBase = getAccountGraphBase(account);
+  const body = new URLSearchParams({
+    message: text,
+    access_token: accessToken,
+  });
+
+  const res = await fetchFn(
+    `${graphBase}/${encodeURIComponent(commentId)}/replies`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: body.toString(),
+    }
+  );
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(
+      `Instagram reply failed (${res.status}): ${errText.slice(0, 180)}`
+    );
+  }
+
+  const data = (await res.json()) as { id?: string };
+  return { replyId: data.id || `ig-reply-${Date.now()}` };
+}

@@ -3,6 +3,8 @@ import { describe, expect, it, vi } from "vitest";
 import {
   fetchInstagramEngagement,
   fetchYouTubeEngagement,
+  replyToInstagramComment,
+  replyToYouTubeComment,
 } from "./engagement";
 
 describe("engagement analytics fetchers", () => {
@@ -174,5 +176,49 @@ describe("engagement analytics fetchers", () => {
     expect(result.totalPosts).toBe(42);
     expect(result.recentPosts[0].likes).toBe(245);
     expect(result.recentComments[0].authorName).toBe("@fan_account");
+  });
+
+  it("posts replies to YouTube and Instagram comments", async () => {
+    const ytFetch = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ id: "yt_reply_1" }), { status: 200 })
+      );
+
+    const ytRes = await replyToYouTubeComment(
+      "yt_token",
+      "cmt_1",
+      "Thank you!",
+      ytFetch
+    );
+    expect(ytRes.replyId).toBe("yt_reply_1");
+    expect(ytFetch).toHaveBeenCalledWith(
+      expect.stringContaining("/comments?part=snippet"),
+      expect.objectContaining({ method: "POST" })
+    );
+
+    const igFetch = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ id: "ig_reply_1" }), { status: 200 })
+      );
+    const igAccount = {
+      id: "acc_ig",
+      platform: Platform.INSTAGRAM,
+      metadata: { graphBase: "https://graph.facebook.com/v22.0" },
+    } as unknown as SocialAccount;
+
+    const igRes = await replyToInstagramComment(
+      igAccount,
+      "ig_token",
+      "ig_cmt_99",
+      "Appreciate it!",
+      igFetch
+    );
+    expect(igRes.replyId).toBe("ig_reply_1");
+    expect(igFetch).toHaveBeenCalledWith(
+      expect.stringContaining("/ig_cmt_99/replies"),
+      expect.objectContaining({ method: "POST" })
+    );
   });
 });

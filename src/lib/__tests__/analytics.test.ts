@@ -5,6 +5,7 @@ import {
   formatCompactNumber,
   formatPercent,
   getPostEngagementRate,
+  matchCrossPostedPairs,
   type ChannelEngagementDTO,
   type PostEngagementDTO,
 } from "../analytics";
@@ -115,5 +116,56 @@ describe("analytics helpers", () => {
     expect(stats.sparklineValues).toEqual([1000, 500]);
     expect(getPostEngagementRate(samplePosts[0])).toBeCloseTo(5, 2);
     expect(getPostEngagementRate(samplePosts[2])).toBeNull();
+  });
+
+  it("matches cross-posted YouTube and Instagram posts via exact Cadence link and fuzzy title", () => {
+    const crossPosts: PostEngagementDTO[] = [
+      ...samplePosts,
+      {
+        id: "yt_hanuman",
+        platform: "YOUTUBE",
+        accountId: "acc-yt",
+        accountName: "Myth Lantern",
+        title: "Why Hanuman Carried an Entire Mountain #shorts",
+        thumbnailUrl: null,
+        url: "https://youtube.com/watch?v=yt_hanuman",
+        publishedAt: "2026-11-21T10:00:00Z",
+        views: 100,
+        likes: 10,
+        comments: 2,
+      },
+      {
+        id: "ig_hanuman",
+        platform: "INSTAGRAM",
+        accountId: "acc-ig",
+        accountName: "Myth Lantern IG",
+        title: "Why Hanuman Carried an Entire Mountain (Valmiki Ramayana) #MythLantern",
+        thumbnailUrl: null,
+        url: "https://instagram.com/reel/ig_hanuman",
+        publishedAt: "2026-11-21T10:05:00Z",
+        views: null,
+        likes: 20,
+        comments: 4,
+      },
+    ];
+
+    const pairs = matchCrossPostedPairs(crossPosts, [
+      {
+        postId: "post_exact",
+        title: "Zeus vs Viral",
+        youtubeExternalId: "v1",
+        instagramExternalId: "ig1",
+      },
+    ]);
+
+    expect(pairs).toHaveLength(2);
+    const exact = pairs.find((p) => p.matchType === "cadence");
+    const auto = pairs.find((p) => p.matchType === "auto");
+    expect(exact?.youtube.id).toBe("v1");
+    expect(exact?.instagram.id).toBe("ig1");
+    expect(auto?.youtube.id).toBe("yt_hanuman");
+    expect(auto?.instagram.id).toBe("ig_hanuman");
+    expect(auto?.combinedLikes).toBe(30);
+    expect(auto?.combinedComments).toBe(6);
   });
 });

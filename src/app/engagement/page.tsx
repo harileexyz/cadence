@@ -21,12 +21,14 @@ import {
   Sparkles,
   Users,
 } from "lucide-react";
+import { CrossPlatformComparison } from "@/components/CrossPlatformComparison";
 import {
   ChannelComparisonChart,
   MiniSparkline,
   PostsPerformanceChart,
 } from "@/components/EngagementCharts";
 import { PlatformBadge } from "@/components/PlatformBadge";
+import { UnifiedCommentInbox } from "@/components/UnifiedCommentInbox";
 import {
   computeChannelStats,
   computeScopedSummary,
@@ -34,6 +36,7 @@ import {
   formatPercent,
   formatRelativeDate,
   getPostEngagementRate,
+  matchCrossPostedPairs,
   type EngagementResponse,
 } from "@/lib/analytics";
 
@@ -171,6 +174,11 @@ export default function EngagementPage() {
         )
       : data.recentComments;
   }, [data, activeChannel]);
+
+  const crossPostPairs = useMemo(() => {
+    if (!data) return [];
+    return matchCrossPostedPairs(data.recentPosts, data.crossPostLinks);
+  }, [data]);
 
   return (
     <div className="space-y-6">
@@ -721,6 +729,9 @@ export default function EngagementPage() {
             </section>
           )}
 
+          {/* Cross-Platform Side-by-Side Post Comparison (All Channels Overview) */}
+          {!activeChannel && <CrossPlatformComparison pairs={crossPostPairs} />}
+
           {/* Bottom 2-Column Content: Posts Performance + Recent Comments Inbox */}
           <div className="grid gap-6 lg:grid-cols-3">
             {/* Posts Performance (2 cols) */}
@@ -898,69 +909,12 @@ export default function EngagementPage() {
               )}
             </section>
 
-            {/* Unified Recent Comments Inbox (1 col) */}
-            <section className="space-y-3">
-              <div className="flex items-center gap-2">
-                <MessageCircle className="h-4 w-4 text-amber-500" />
-                <h2 className="text-sm font-semibold text-slate-900">
-                  Recent Comments{" "}
-                  <span className="font-normal text-slate-400">
-                    ({filteredComments.length})
-                  </span>
-                </h2>
-              </div>
-
-              {filteredComments.length === 0 ? (
-                <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-xs text-slate-500">
-                  No recent comments on{" "}
-                  {activeChannel ? activeChannel.displayName : "your channels"}{" "}
-                  yet.
-                </div>
-              ) : (
-                <div className="max-h-[640px] divide-y divide-slate-100 overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-2xs">
-                  {filteredComments.map((cmt) => (
-                    <div
-                      key={`${cmt.platform}-${cmt.id}`}
-                      className="space-y-2 p-4 transition hover:bg-slate-50/70"
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex min-w-0 items-center gap-2">
-                          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[10px] font-bold text-slate-700">
-                            {cmt.authorName.replace(/^@/, "").charAt(0).toUpperCase()}
-                          </span>
-                          <span className="truncate text-xs font-semibold text-slate-900">
-                            {cmt.authorName}
-                          </span>
-                          {!activeChannel && (
-                            <PlatformBadge platform={cmt.platform} />
-                          )}
-                        </div>
-                        <span className="shrink-0 text-[11px] text-slate-400">
-                          {formatRelativeDate(cmt.publishedAt)}
-                        </span>
-                      </div>
-
-                      <p className="text-xs leading-relaxed text-slate-700">
-                        {cmt.text}
-                      </p>
-
-                      <a
-                        href={cmt.postUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex max-w-full items-center gap-1 text-[11px] font-medium text-indigo-600 hover:underline"
-                      >
-                        <span className="truncate">
-                          {!activeChannel ? `${cmt.accountName} · ` : ""}
-                          {cmt.postTitle}
-                        </span>
-                        <ExternalLink className="h-3 w-3 shrink-0" />
-                      </a>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </section>
+            {/* Unified Comment Reply Inbox (1 col) */}
+            <UnifiedCommentInbox
+              comments={filteredComments}
+              showPlatformFilter={!activeChannel}
+              scopeName={activeChannel?.displayName}
+            />
           </div>
         </>
       )}

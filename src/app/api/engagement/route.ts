@@ -15,10 +15,50 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const accounts = await prisma.socialAccount.findMany({
-    where: { userId: user.id, isActive: true },
-    orderBy: [{ platform: "asc" }, { createdAt: "desc" }],
-  });
+  const [accounts, publishedCrossPosts] = await Promise.all([
+    prisma.socialAccount.findMany({
+      where: { userId: user.id, isActive: true },
+      orderBy: [{ platform: "asc" }, { createdAt: "desc" }],
+    }),
+    prisma.post.findMany({
+      where: {
+        userId: user.id,
+        status: { in: ["PUBLISHED", "PARTIAL_FAILURE"] },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 30,
+      include: {
+        targets: {
+          where: { status: "PUBLISHED", externalPostId: { not: null } },
+          include: { account: { select: { platform: true } } },
+        },
+      },
+    }),
+  ]);
+
+  const crossPostLinks: Array<{
+    postId: string;
+    title: string | null;
+    youtubeExternalId: string;
+    instagramExternalId: string;
+  }> = [];
+
+  for (const post of publishedCrossPosts) {
+    const yt = post.targets.find(
+      (t) => t.account.platform === Platform.YOUTUBE && t.externalPostId
+    );
+    const ig = post.targets.find(
+      (t) => t.account.platform === Platform.INSTAGRAM && t.externalPostId
+    );
+    if (yt?.externalPostId && ig?.externalPostId) {
+      crossPostLinks.push({
+        postId: post.id,
+        title: post.title,
+        youtubeExternalId: yt.externalPostId,
+        instagramExternalId: ig.externalPostId,
+      });
+    }
+  }
 
   const channelResults: ChannelEngagement[] = await Promise.all(
     accounts.map(async (account) => {
@@ -74,6 +114,7 @@ export async function GET() {
     channels: channelResults,
     recentPosts: allPosts,
     recentComments: allComments,
+    crossPostLinks,
     fetchedAt: new Date().toISOString(),
   });
 }
