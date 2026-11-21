@@ -372,7 +372,7 @@ function AccountsContent() {
                 key={acc.id}
                 className="flex flex-col justify-between rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
               >
-                <div className="flex items-start justify-between gap-4">
+                <div className="flex items-start justify-between gap-2 sm:gap-4">
                   <div className="flex min-w-0 items-center gap-3">
                     {acc.avatarUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
@@ -380,16 +380,16 @@ function AccountsContent() {
                         src={acc.avatarUrl}
                         alt={acc.displayName}
                         referrerPolicy="no-referrer"
-                        className="h-11 w-11 rounded-full object-cover"
+                        className="h-11 w-11 shrink-0 rounded-full object-cover"
                       />
                     ) : (
-                      <div className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-100 text-sm font-semibold text-slate-600">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-slate-100 text-sm font-semibold text-slate-600">
                         {acc.displayName.charAt(0).toUpperCase()}
                       </div>
                     )}
 
                     <div className="min-w-0">
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-1.5">
                         <PlatformBadge platform={acc.platform} />
                         <span
                           className={`text-xs font-medium ${
