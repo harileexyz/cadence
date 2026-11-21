@@ -248,8 +248,8 @@ export default function EngagementPage() {
         </div>
       ) : (
         <>
-          {/* Account Switcher Bar (Always Accessible for 1-Tap Per-Account Switching) */}
-          <div className="-mx-1 flex items-center gap-2 overflow-x-auto px-1 pb-1">
+          {/* Account Switcher Bar (Wraps cleanly so no account pill is ever clipped) */}
+          <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={() => selectAccount("ALL")}
@@ -467,8 +467,8 @@ export default function EngagementPage() {
           </div>
 
           {/* Visual Analytics Row: Performance Chart + Comparison / Top Post Spotlight */}
-          <div className="grid gap-5 lg:grid-cols-5">
-            <div className="lg:col-span-3">
+          <div className="grid items-stretch gap-5 lg:grid-cols-5">
+            <div className="min-w-0 lg:col-span-3">
               <PostsPerformanceChart
                 posts={scopedPosts}
                 scopeLabel={
@@ -477,7 +477,7 @@ export default function EngagementPage() {
               />
             </div>
 
-            <div className="lg:col-span-2">
+            <div className="min-w-0 lg:col-span-2">
               {activeChannel ? (
                 /* Single-Account Mode: Top Performing Post Spotlight + Benchmarks */
                 <div className="flex h-full flex-col justify-between rounded-2xl border border-slate-200 bg-white p-5 shadow-2xs">
@@ -667,7 +667,9 @@ export default function EngagementPage() {
                                 </p>
                                 <p className="mt-0.5 text-sm font-bold text-slate-900">
                                   {ch.totalViews !== null
-                                    ? formatCompactNumber(ch.totalViews)
+                                    ? formatCompactNumber(
+                                        Math.max(ch.totalViews, cs.recentViews)
+                                      )
                                     : "—"}
                                 </p>
                               </div>

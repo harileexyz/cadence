@@ -95,16 +95,23 @@ export function PostsPerformanceChart({
   const effectiveMetric: PostChartMetric =
     !hasViews && (metric === "views" || metric === "rate") ? "likes" : metric;
 
-  // Show up to 12 most recent posts chronologically (oldest -> newest)
+  // Show up to 12 most recent posts chronologically (oldest -> newest).
+  // When viewing Views or Eng. %, exclude posts without view counts (e.g. Instagram)
+  // so they don't render as misleading zero-height bars.
   const chartPosts = useMemo(() => {
-    return [...posts]
+    const eligible =
+      effectiveMetric === "views" || effectiveMetric === "rate"
+        ? posts.filter((p) => p.views !== null)
+        : posts;
+
+    return [...eligible]
       .sort(
         (a, b) =>
           new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
       )
       .slice(0, 12)
       .reverse();
-  }, [posts]);
+  }, [posts, effectiveMetric]);
 
   const values = useMemo(() => {
     return chartPosts.map((p) => {
@@ -133,7 +140,7 @@ export function PostsPerformanceChart({
       : formatCompactNumber(Math.round(val));
 
   return (
-    <div className="flex flex-col rounded-2xl border border-slate-200 bg-white p-5 shadow-2xs">
+    <div className="flex h-full flex-col justify-between rounded-2xl border border-slate-200 bg-white p-5 shadow-2xs">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
@@ -169,7 +176,10 @@ export function PostsPerformanceChart({
               <button
                 key={tab.key}
                 type="button"
-                onClick={() => setMetric(tab.key)}
+                onClick={() => {
+                  setMetric(tab.key);
+                  setActiveIndex(null);
+                }}
                 className={`rounded-md px-2.5 py-1 font-medium transition ${
                   effectiveMetric === tab.key
                     ? "bg-white text-slate-900 shadow-2xs"
@@ -183,13 +193,13 @@ export function PostsPerformanceChart({
       </div>
 
       {chartPosts.length === 0 ? (
-        <div className="flex h-52 items-center justify-center text-xs text-slate-400">
+        <div className="flex min-h-[220px] flex-1 items-center justify-center text-xs text-slate-400">
           No recent posts available to chart.
         </div>
       ) : (
-        <>
+        <div className="flex flex-1 flex-col justify-between">
           {/* Bar Chart Canvas */}
-          <div className="relative mt-6 h-48 pt-4">
+          <div className="relative mt-6 min-h-[210px] flex-1 pt-4">
             {/* Subtle horizontal gridlines */}
             <div className="pointer-events-none absolute inset-x-0 top-4 bottom-6 flex flex-col justify-between">
               {[1, 0.5, 0].map((ratio) => (
@@ -209,13 +219,13 @@ export function PostsPerformanceChart({
               <div
                 className="pointer-events-none absolute right-0 left-11 z-10 border-t border-dashed border-indigo-400/80"
                 style={{
-                  bottom: `calc(1.5rem + ${(avgPct / 100) * 144}px)`,
+                  bottom: `calc(1.5rem + ${avgPct * 0.78}%)`,
                 }}
               />
             )}
 
             {/* Bars */}
-            <div className="relative z-20 flex h-full items-end gap-1.5 pl-11 sm:gap-2.5">
+            <div className="relative z-20 flex h-full min-h-[190px] items-end gap-1.5 pl-11 sm:gap-2">
               {chartPosts.map((post, idx) => {
                 const val = values[idx];
                 const heightPct = Math.max(4, (val / maxValue) * 100);
@@ -233,6 +243,12 @@ export function PostsPerformanceChart({
                   undefined,
                   { month: "short", day: "numeric" }
                 );
+                const showDateLabel =
+                  chartPosts.length <= 7 ||
+                  isActive ||
+                  idx === 0 ||
+                  idx === chartPosts.length - 1 ||
+                  idx % 2 === 0;
 
                 return (
                   <button
@@ -241,7 +257,7 @@ export function PostsPerformanceChart({
                     onMouseEnter={() => setActiveIndex(idx)}
                     onFocus={() => setActiveIndex(idx)}
                     onClick={() => setActiveIndex(idx)}
-                    className="group flex h-full flex-1 flex-col items-center justify-end focus:outline-none"
+                    className="group flex h-full min-w-0 flex-1 flex-col items-center justify-end focus:outline-none"
                     title={`${post.title} — ${formatMetricVal(val)}`}
                   >
                     <div className="flex w-full flex-1 items-end justify-center pb-1">
@@ -253,13 +269,13 @@ export function PostsPerformanceChart({
                       />
                     </div>
                     <span
-                      className={`mt-1 w-full truncate text-center text-[10px] ${
+                      className={`mt-1 h-3.5 w-full truncate text-center text-[9px] leading-none sm:text-[10px] ${
                         isActive
                           ? "font-semibold text-indigo-700"
                           : "text-slate-400"
                       }`}
                     >
-                      {shortDate}
+                      {showDateLabel ? shortDate : ""}
                     </span>
                   </button>
                 );
@@ -318,7 +334,7 @@ export function PostsPerformanceChart({
               </div>
             </div>
           )}
-        </>
+        </div>
       )}
     </div>
   );
@@ -331,25 +347,29 @@ export function ChannelComparisonChart({
   channelStats: ChannelComputedStats[];
   onSelectChannel: (accountId: string) => void;
 }) {
-  const [metric, setMetric] = useState<CompareMetric>("totalViews");
+  const [metric, setMetric] = useState<CompareMetric>("followers");
 
   const rows = useMemo(() => {
     const mapped = channelStats.map((cs) => {
-      let value = 0;
+      let value: number | null = 0;
       if (metric === "followers") value = cs.channel.followersCount;
-      else if (metric === "totalViews") value = cs.channel.totalViews ?? 0;
-      else if (metric === "avgViews") value = cs.avgViewsPerPost ?? 0;
+      else if (metric === "totalViews") {
+        value =
+          cs.channel.totalViews !== null
+            ? Math.max(cs.channel.totalViews, cs.recentViews)
+            : null;
+      } else if (metric === "avgViews") value = cs.avgViewsPerPost;
       else value = cs.recentLikes;
       return { ...cs, value };
     });
-    return mapped.sort((a, b) => b.value - a.value);
+    return mapped.sort((a, b) => (b.value ?? -1) - (a.value ?? -1));
   }, [channelStats, metric]);
 
-  const totalValue = rows.reduce((s, r) => s + r.value, 0);
-  const maxValue = Math.max(...rows.map((r) => r.value), 1);
+  const totalValue = rows.reduce((s, r) => s + (r.value ?? 0), 0);
+  const maxValue = Math.max(...rows.map((r) => r.value ?? 0), 1);
 
   return (
-    <div className="flex flex-col rounded-2xl border border-slate-200 bg-white p-5 shadow-2xs">
+    <div className="flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-5 shadow-2xs">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <div className="flex items-center gap-2">
@@ -359,7 +379,7 @@ export function ChannelComparisonChart({
             </h2>
           </div>
           <p className="mt-0.5 text-xs text-slate-500">
-            Click any account to open its dedicated dashboard
+            Click any account to open its dashboard
           </p>
         </div>
 
@@ -369,18 +389,24 @@ export function ChannelComparisonChart({
           onChange={(e) => setMetric(e.target.value as CompareMetric)}
           className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-medium text-slate-700 focus:border-indigo-500 focus:outline-none"
         >
-          <option value="totalViews">Lifetime Views</option>
           <option value="followers">Subscribers / Followers</option>
-          <option value="avgViews">Avg Views / Post</option>
           <option value="recentLikes">Recent Likes</option>
+          <option value="totalViews">Lifetime Views</option>
+          <option value="avgViews">Avg Views / Post</option>
         </select>
       </div>
 
-      <div className="mt-5 space-y-3.5">
+      <div className="mt-4 space-y-2">
         {rows.map((row) => {
-          const widthPct = Math.max(3, (row.value / maxValue) * 100);
+          const numericVal = row.value ?? 0;
+          const widthPct =
+            row.value === null
+              ? 0
+              : Math.max(3, (numericVal / maxValue) * 100);
           const sharePct =
-            totalValue > 0 ? Math.round((row.value / totalValue) * 100) : 0;
+            totalValue > 0 && row.value !== null
+              ? Math.round((numericVal / totalValue) * 100)
+              : 0;
           const barGradient =
             row.channel.platform === "YOUTUBE"
               ? "from-rose-500 to-red-500"
@@ -391,7 +417,7 @@ export function ChannelComparisonChart({
               key={row.channel.accountId}
               type="button"
               onClick={() => onSelectChannel(row.channel.accountId)}
-              className="group block w-full rounded-xl p-2 text-left transition hover:bg-slate-50"
+              className="group block w-full rounded-xl p-1.5 text-left transition hover:bg-slate-50"
             >
               <div className="flex items-center justify-between gap-2">
                 <div className="flex min-w-0 items-center gap-2.5">
@@ -412,7 +438,7 @@ export function ChannelComparisonChart({
                     <p className="truncate text-xs font-semibold text-slate-900 group-hover:text-indigo-600">
                       {row.channel.displayName}
                     </p>
-                    <p className="text-[10px] text-slate-400">
+                    <p className="truncate text-[10px] text-slate-400">
                       {row.channel.platform === "YOUTUBE"
                         ? "YouTube"
                         : "Instagram"}
@@ -423,19 +449,21 @@ export function ChannelComparisonChart({
 
                 <div className="shrink-0 text-right">
                   <p className="text-xs font-bold text-slate-900">
-                    {formatCompactNumber(row.value)}
+                    {row.value !== null ? formatCompactNumber(row.value) : "—"}
                   </p>
                   <p className="text-[10px] font-medium text-slate-400">
-                    {sharePct}% share
+                    {row.value !== null ? `${sharePct}% share` : "N/A on IG"}
                   </p>
                 </div>
               </div>
 
-              <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-100">
-                <div
-                  className={`h-full rounded-full bg-gradient-to-r ${barGradient} transition-all duration-300`}
-                  style={{ width: `${widthPct}%` }}
-                />
+              <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+                {widthPct > 0 && (
+                  <div
+                    className={`h-full rounded-full bg-gradient-to-r ${barGradient} transition-all duration-300`}
+                    style={{ width: `${widthPct}%` }}
+                  />
+                )}
               </div>
             </button>
           );
