@@ -2,10 +2,10 @@
 
 import {
   ArrowLeftRight,
-  ExternalLink,
   Eye,
   Heart,
   MessageCircle,
+  Play,
   Sparkles,
 } from "lucide-react";
 import { PlatformBadge } from "@/components/PlatformBadge";
@@ -13,12 +13,15 @@ import {
   formatCompactNumber,
   formatRelativeDate,
   type CrossPlatformPair,
+  type PostEngagementDTO,
 } from "@/lib/analytics";
 
 export function CrossPlatformComparison({
   pairs,
+  onPreviewPost,
 }: {
   pairs: CrossPlatformPair[];
+  onPreviewPost: (post: PostEngagementDTO) => void;
 }) {
   if (pairs.length === 0) return null;
 
@@ -88,18 +91,20 @@ export function CrossPlatformComparison({
                 </div>
               </div>
 
-              {/* Side-by-Side Platform Boxes */}
+              {/* Side-by-Side Platform Boxes (click to watch inside Cadence) */}
               <div className="mt-4 grid grid-cols-2 gap-2.5">
                 {/* YouTube */}
-                <a
-                  href={pair.youtube.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="group rounded-xl border border-rose-100 bg-rose-50/40 p-3 transition hover:border-rose-300"
+                <button
+                  type="button"
+                  onClick={() => onPreviewPost(pair.youtube)}
+                  className="group rounded-xl border border-rose-100 bg-rose-50/40 p-3 text-left transition hover:border-rose-300"
                 >
                   <div className="flex items-center justify-between gap-1">
                     <PlatformBadge platform="YOUTUBE" />
-                    <ExternalLink className="h-3 w-3 text-slate-400 group-hover:text-rose-600" />
+                    <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-rose-600 opacity-80 group-hover:opacity-100">
+                      <Play className="h-2.5 w-2.5 fill-current" />
+                      Watch
+                    </span>
                   </div>
                   <p className="mt-1 truncate text-[11px] font-medium text-slate-600">
                     {pair.youtube.accountName}
@@ -120,18 +125,20 @@ export function CrossPlatformComparison({
                       {formatCompactNumber(pair.youtube.comments)}
                     </span>
                   </div>
-                </a>
+                </button>
 
                 {/* Instagram */}
-                <a
-                  href={pair.instagram.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="group rounded-xl border border-fuchsia-100 bg-fuchsia-50/40 p-3 transition hover:border-fuchsia-300"
+                <button
+                  type="button"
+                  onClick={() => onPreviewPost(pair.instagram)}
+                  className="group rounded-xl border border-fuchsia-100 bg-fuchsia-50/40 p-3 text-left transition hover:border-fuchsia-300"
                 >
                   <div className="flex items-center justify-between gap-1">
                     <PlatformBadge platform="INSTAGRAM" />
-                    <ExternalLink className="h-3 w-3 text-slate-400 group-hover:text-fuchsia-600" />
+                    <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-fuchsia-600 opacity-80 group-hover:opacity-100">
+                      <Play className="h-2.5 w-2.5 fill-current" />
+                      Watch
+                    </span>
                   </div>
                   <p className="mt-1 truncate text-[11px] font-medium text-slate-600">
                     {pair.instagram.accountName}
@@ -146,7 +153,7 @@ export function CrossPlatformComparison({
                       {formatCompactNumber(pair.instagram.comments)}
                     </span>
                   </div>
-                </a>
+                </button>
               </div>
 
               {/* Engagement Split Bar */}

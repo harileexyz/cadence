@@ -16,11 +16,13 @@ import {
   Loader2,
   MessageCircle,
   PenSquare,
+  Play,
   RefreshCw,
   Search,
   Sparkles,
   Users,
 } from "lucide-react";
+import { ContentViewerModal } from "@/components/ContentViewerModal";
 import { CrossPlatformComparison } from "@/components/CrossPlatformComparison";
 import {
   ChannelComparisonChart,
@@ -38,6 +40,7 @@ import {
   getPostEngagementRate,
   matchCrossPostedPairs,
   type EngagementResponse,
+  type PostEngagementDTO,
 } from "@/lib/analytics";
 
 type SortMode = "latest" | "views" | "likes" | "rate";
@@ -51,6 +54,7 @@ export default function EngagementPage() {
   const [selectedAccountId, setSelectedAccountId] = useState<string>("ALL");
   const [sortBy, setSortBy] = useState<SortMode>("latest");
   const [postQuery, setPostQuery] = useState("");
+  const [previewPost, setPreviewPost] = useState<PostEngagementDTO | null>(null);
 
   // Read optional ?account=<id> query param on initial load
   useEffect(() => {
@@ -503,22 +507,32 @@ export default function EngagementPage() {
                     {scopedSummary.topPost ? (
                       <div className="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-slate-50/70">
                         {scopedSummary.topPost.thumbnailUrl && (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={scopedSummary.topPost.thumbnailUrl}
-                            alt={scopedSummary.topPost.title}
-                            className="h-36 w-full object-cover"
-                          />
+                          <button
+                            type="button"
+                            onClick={() => setPreviewPost(scopedSummary.topPost)}
+                            className="group relative block w-full overflow-hidden"
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={scopedSummary.topPost.thumbnailUrl}
+                              alt={scopedSummary.topPost.title}
+                              className="h-36 w-full object-cover transition group-hover:scale-105"
+                            />
+                            <span className="absolute inset-0 flex items-center justify-center bg-slate-950/30 transition group-hover:bg-slate-950/45">
+                              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white/95 text-slate-900 shadow-md">
+                                <Play className="ml-0.5 h-4 w-4 fill-current" />
+                              </span>
+                            </span>
+                          </button>
                         )}
                         <div className="p-3.5">
-                          <a
-                            href={scopedSummary.topPost.url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="line-clamp-2 text-sm font-semibold text-slate-900 hover:text-indigo-600"
+                          <button
+                            type="button"
+                            onClick={() => setPreviewPost(scopedSummary.topPost)}
+                            className="line-clamp-2 text-left text-sm font-semibold text-slate-900 hover:text-indigo-600"
                           >
                             {scopedSummary.topPost.title}
-                          </a>
+                          </button>
                           <div className="mt-2.5 flex flex-wrap items-center gap-3 text-xs font-semibold text-slate-700">
                             {scopedSummary.topPost.views !== null && (
                               <span className="inline-flex items-center gap-1">
@@ -730,7 +744,12 @@ export default function EngagementPage() {
           )}
 
           {/* Cross-Platform Side-by-Side Post Comparison (All Channels Overview) */}
-          {!activeChannel && <CrossPlatformComparison pairs={crossPostPairs} />}
+          {!activeChannel && (
+            <CrossPlatformComparison
+              pairs={crossPostPairs}
+              onPreviewPost={(p) => setPreviewPost(p)}
+            />
+          )}
 
           {/* Bottom 2-Column Content: Posts Performance + Recent Comments Inbox */}
           <div className="grid gap-6 lg:grid-cols-3">
@@ -810,18 +829,30 @@ export default function EngagementPage() {
                         className="flex flex-col gap-3 p-4 transition hover:bg-slate-50/70 sm:flex-row sm:items-center sm:justify-between"
                       >
                         <div className="flex min-w-0 flex-1 items-center gap-3.5">
-                          {post.thumbnailUrl ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              src={post.thumbnailUrl}
-                              alt={post.title}
-                              className="h-14 w-24 shrink-0 rounded-lg border border-slate-200 object-cover"
-                            />
-                          ) : (
-                            <div className="flex h-14 w-24 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-xs text-slate-400">
-                              No thumb
-                            </div>
-                          )}
+                          <button
+                            type="button"
+                            onClick={() => setPreviewPost(post)}
+                            title="Watch inside Cadence"
+                            className="group relative h-14 w-24 shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-slate-100"
+                          >
+                            {post.thumbnailUrl ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={post.thumbnailUrl}
+                                alt={post.title}
+                                className="h-full w-full object-cover transition group-hover:scale-105"
+                              />
+                            ) : (
+                              <span className="flex h-full w-full items-center justify-center text-xs text-slate-400">
+                                Preview
+                              </span>
+                            )}
+                            <span className="absolute inset-0 flex items-center justify-center bg-slate-950/25 opacity-0 transition group-hover:opacity-100">
+                              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/95 text-slate-900 shadow-xs">
+                                <Play className="ml-0.5 h-3.5 w-3.5 fill-current" />
+                              </span>
+                            </span>
+                          </button>
 
                           <div className="min-w-0 flex-1">
                             <div className="flex flex-wrap items-center gap-1.5">
@@ -845,15 +876,24 @@ export default function EngagementPage() {
                               </span>
                             </div>
 
-                            <a
-                              href={post.url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="mt-1 inline-flex max-w-full items-center gap-1 text-sm font-semibold text-slate-900 hover:text-indigo-600"
-                            >
-                              <span className="truncate">{post.title}</span>
-                              <ExternalLink className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-                            </a>
+                            <div className="mt-1 flex items-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => setPreviewPost(post)}
+                                className="min-w-0 truncate text-left text-sm font-semibold text-slate-900 hover:text-indigo-600"
+                              >
+                                {post.title}
+                              </button>
+                              <a
+                                href={post.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                title={`Open on ${post.platform === "YOUTUBE" ? "YouTube" : "Instagram"}`}
+                                className="shrink-0 text-slate-400 hover:text-indigo-600"
+                              >
+                                <ExternalLink className="h-3.5 w-3.5" />
+                              </a>
+                            </div>
 
                             {/* Relative performance bar */}
                             <div className="mt-2 h-1.5 w-full max-w-[220px] overflow-hidden rounded-full bg-slate-100">
@@ -918,6 +958,12 @@ export default function EngagementPage() {
           </div>
         </>
       )}
+
+      {/* In-App Content Viewer Modal (YouTube Embed + Instagram Video/Photo Player) */}
+      <ContentViewerModal
+        post={previewPost}
+        onClose={() => setPreviewPost(null)}
+      />
     </div>
   );
 }

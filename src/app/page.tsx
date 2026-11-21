@@ -14,10 +14,12 @@ import {
   Instagram,
   Loader2,
   PenSquare,
+  Play,
   RefreshCw,
   Send,
   Sparkles,
   Trash2,
+  X,
   Youtube,
 } from "lucide-react";
 import { PlatformBadge } from "@/components/PlatformBadge";
@@ -175,6 +177,7 @@ export default function QueuePage() {
   const [isUnauthenticated, setIsUnauthenticated] = useState(false);
   const [filter, setFilter] = useState<FilterTab>("ALL");
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [previewPost, setPreviewPost] = useState<PostDTO | null>(null);
 
   const loadPosts = useCallback(async () => {
     try {
@@ -422,6 +425,16 @@ export default function QueuePage() {
                   </div>
 
                   <div className="flex shrink-0 items-center gap-2">
+                    {firstAsset && (
+                      <button
+                        type="button"
+                        onClick={() => setPreviewPost(post)}
+                        className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700"
+                      >
+                        <Play className="h-3.5 w-3.5" />
+                        <span>Preview</span>
+                      </button>
+                    )}
                     {post.status === "DRAFT" && (
                       <button
                         type="button"
@@ -524,6 +537,65 @@ export default function QueuePage() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* In-App Queue Media Preview Modal */}
+      {previewPost && previewPost.media[0]?.mediaAsset && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 p-4 backdrop-blur-xs"
+          onClick={() => setPreviewPost(null)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className="relative flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-slate-900">
+                  {previewPost.title || previewPost.media[0].mediaAsset.filename}
+                </p>
+                <p className="text-[11px] text-slate-500">
+                  {previewPost.status.replace("_", " ")} ·{" "}
+                  {previewPost.targets.map((t) => t.account.displayName).join(", ")}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPreviewPost(null)}
+                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="flex items-center justify-center bg-slate-950">
+              {previewPost.media[0].mediaAsset.mimeType.startsWith("video/") ? (
+                <video
+                  src={previewPost.media[0].mediaAsset.publicUrl}
+                  controls
+                  autoPlay
+                  playsInline
+                  className="max-h-[62vh] w-full object-contain"
+                />
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={previewPost.media[0].mediaAsset.publicUrl}
+                  alt={previewPost.title || "Post preview"}
+                  className="max-h-[62vh] w-full object-contain"
+                />
+              )}
+            </div>
+
+            {previewPost.baseCaption && (
+              <div className="max-h-32 overflow-y-auto border-t border-slate-100 bg-slate-50 px-4 py-3 text-xs whitespace-pre-wrap text-slate-700">
+                {previewPost.baseCaption}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

@@ -4,7 +4,10 @@ export interface PostEngagementDTO {
   accountId: string;
   accountName: string;
   title: string;
+  description?: string | null;
   thumbnailUrl: string | null;
+  mediaUrl?: string | null;
+  mediaType?: string | null;
   url: string;
   publishedAt: string;
   views: number | null;

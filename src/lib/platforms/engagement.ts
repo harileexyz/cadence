@@ -9,7 +9,10 @@ export interface PostEngagement {
   accountId: string;
   accountName: string;
   title: string;
+  description?: string | null;
   thumbnailUrl: string | null;
+  mediaUrl?: string | null;
+  mediaType?: string | null;
   url: string;
   publishedAt: string;
   views: number | null;
@@ -151,8 +154,10 @@ export async function fetchYouTubeEngagement(
                 id: string;
                 snippet?: {
                   title?: string;
+                  description?: string;
                   publishedAt?: string;
                   thumbnails?: {
+                    high?: { url?: string };
                     medium?: { url?: string };
                     default?: { url?: string };
                   };
@@ -171,10 +176,14 @@ export async function fetchYouTubeEngagement(
               accountId: account.id,
               accountName: account.displayName,
               title: v.snippet?.title || "Untitled Video",
+              description: v.snippet?.description || null,
               thumbnailUrl:
+                v.snippet?.thumbnails?.high?.url ||
                 v.snippet?.thumbnails?.medium?.url ||
                 v.snippet?.thumbnails?.default?.url ||
                 null,
+              mediaUrl: `https://www.youtube.com/embed/${v.id}`,
+              mediaType: "YOUTUBE_VIDEO",
               url: `https://www.youtube.com/watch?v=${v.id}`,
               publishedAt: v.snippet?.publishedAt || new Date().toISOString(),
               views: toInt(v.statistics?.viewCount),
@@ -318,7 +327,10 @@ export async function fetchInstagramEngagement(
         title: m.caption
           ? m.caption.split("\n")[0].slice(0, 90)
           : `Instagram ${m.media_type || "Post"}`,
+        description: m.caption || null,
         thumbnailUrl: m.thumbnail_url || m.media_url || null,
+        mediaUrl: m.media_url || null,
+        mediaType: m.media_type || null,
         url: m.permalink || "https://www.instagram.com/",
         publishedAt: m.timestamp || new Date().toISOString(),
         views: null,
