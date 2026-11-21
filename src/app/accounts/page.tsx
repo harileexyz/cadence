@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import {
   AlertCircle,
   ArrowRight,
+  BarChart3,
   CheckCircle2,
   ExternalLink,
   Instagram,
@@ -428,6 +429,13 @@ function AccountsContent() {
                   </div>
 
                   <div className="flex shrink-0 items-center gap-1.5">
+                    <Link
+                      href={`/engagement?account=${acc.id}`}
+                      title="View account analytics"
+                      className="rounded-lg border border-slate-200 p-2 text-slate-600 transition hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700"
+                    >
+                      <BarChart3 className="h-4 w-4" />
+                    </Link>
                     <button
                       type="button"
                       title="Configure channel defaults"
