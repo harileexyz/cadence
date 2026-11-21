@@ -1124,12 +1124,12 @@ export default function ComposePage() {
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="grid grid-cols-2 gap-2.5 sm:flex sm:flex-wrap sm:items-center">
           <button
             type="button"
             disabled={submitting}
             onClick={() => void submitPost("draft")}
-            className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+            className="min-h-[44px] rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
           >
             Save Draft
           </button>
@@ -1137,7 +1137,7 @@ export default function ComposePage() {
             type="button"
             disabled={submitting}
             onClick={() => void submitPost("now")}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-100 disabled:opacity-50"
+            className="inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-100 disabled:opacity-50"
           >
             <Send className="h-4 w-4" />
             <span>Post Now</span>
@@ -1146,7 +1146,7 @@ export default function ComposePage() {
             type="button"
             disabled={submitting}
             onClick={() => void submitPost("schedule")}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+            className="col-span-2 inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50 sm:col-span-1"
           >
             {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
             <span>Schedule Post</span>

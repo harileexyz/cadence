@@ -189,7 +189,7 @@ export default function EngagementPage() {
       ) : (
         <>
           {/* Top Cross-Platform KPI Cards */}
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
             <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-2xs">
               <div className="flex items-center justify-between text-xs font-medium text-slate-500">
                 <span>Total Audience</span>
@@ -282,6 +282,7 @@ export default function EngagementPage() {
                         <img
                           src={ch.avatarUrl}
                           alt={ch.displayName}
+                          referrerPolicy="no-referrer"
                           className="h-10 w-10 rounded-full object-cover"
                         />
                       ) : (

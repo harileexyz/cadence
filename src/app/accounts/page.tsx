@@ -164,21 +164,21 @@ function AccountsContent() {
           </p>
         </div>
 
-        <div className="flex flex-wrap gap-2.5">
+        <div className="grid grid-cols-2 gap-2.5 sm:flex sm:flex-wrap">
           <a
             href="/api/auth/youtube/connect"
-            className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-red-700"
+            className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg bg-red-600 px-3.5 py-2 text-sm font-medium text-white shadow-sm hover:bg-red-700"
           >
-            <Youtube className="h-4 w-4" />
-            <span>+ Connect YouTube</span>
+            <Youtube className="h-4 w-4 shrink-0" />
+            <span>YouTube</span>
           </a>
           <button
             type="button"
             onClick={() => setShowIgModal(true)}
-            className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-pink-600 to-purple-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:opacity-95"
+            className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-pink-600 to-purple-600 px-3.5 py-2 text-sm font-medium text-white shadow-sm hover:opacity-95"
           >
-            <Instagram className="h-4 w-4" />
-            <span>+ Connect Instagram</span>
+            <Instagram className="h-4 w-4 shrink-0" />
+            <span>Instagram</span>
           </button>
         </div>
       </div>
@@ -199,7 +199,7 @@ function AccountsContent() {
                     : `${usedChannels} of ${usage.plan.maxChannels} free channels connected`}
                 </span>
               </div>
-              <div className="h-2 w-64 overflow-hidden rounded-full bg-slate-100">
+              <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100 sm:w-64">
                 <div
                   className="h-full rounded-full bg-indigo-600 transition-all"
                   style={{ width: `${quotaPct}%` }}
@@ -379,6 +379,7 @@ function AccountsContent() {
                       <img
                         src={acc.avatarUrl}
                         alt={acc.displayName}
+                        referrerPolicy="no-referrer"
                         className="h-11 w-11 rounded-full object-cover"
                       />
                     ) : (

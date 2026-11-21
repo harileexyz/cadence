@@ -293,7 +293,7 @@ export default function QueuePage() {
       </div>
 
       {/* SaaS Overview Metrics & Getting Started Checklist */}
-      <div className="grid gap-4 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-2xs">
           <p className="text-xs font-medium text-slate-500">Scheduled in Queue</p>
           <p className="mt-1 text-2xl font-bold text-slate-900">
