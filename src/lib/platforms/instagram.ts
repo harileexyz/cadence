@@ -224,14 +224,26 @@ export function createInstagramAdapter(
     platform: Platform.INSTAGRAM,
 
     getAuthUrl(state: string): string {
-      const { appId, redirectUri, isConfigured } = getMetaOAuthConfig();
+      const { appId, configId, redirectUri, isConfigured } = getMetaOAuthConfig();
       if (!isConfigured) {
         throw new Error(
           "Meta/Instagram OAuth is not configured. Set META_APP_ID and META_APP_SECRET."
         );
       }
 
-      // Standard self-serve customer OAuth flow (User Access Token mode, no B2B System-User Business Portfolio picker)
+      // Meta apps using Facebook Login for Business require config_id + override_default_response_type=true
+      if (configId) {
+        const params = new URLSearchParams({
+          client_id: appId,
+          config_id: configId,
+          redirect_uri: redirectUri,
+          response_type: "code",
+          override_default_response_type: "true",
+          state,
+        });
+        return `${FB_OAUTH_DIALOG_URL}?${params.toString()}`;
+      }
+
       const params = new URLSearchParams({
         client_id: appId,
         redirect_uri: redirectUri,
