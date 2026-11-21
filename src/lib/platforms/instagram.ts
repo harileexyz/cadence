@@ -302,7 +302,63 @@ export function createInstagramAdapter(
 
       const discoveredById = new Map<string, ConnectedAccountInput>();
 
-      // 3A. Discover via Facebook Pages (/me/accounts -> instagram_business_account or connected_instagram_account)
+      function addInstagramAccount(
+        ig: {
+          id?: string;
+          username?: string;
+          name?: string;
+          profile_picture_url?: string;
+        },
+        extraMeta: Record<string, unknown> = {}
+      ) {
+        if (!ig.id || discoveredById.has(ig.id)) return;
+        discoveredById.set(ig.id, {
+          platform: Platform.INSTAGRAM,
+          externalAccountId: ig.id,
+          displayName: ig.name || ig.username || "Instagram Account",
+          username: ig.username ? `@${ig.username}` : null,
+          avatarUrl: ig.profile_picture_url || null,
+          accessToken,
+          refreshToken: null,
+          tokenExpiresAt: expiresAt,
+          metadata: {
+            graphBase: FB_GRAPH_BASE,
+            ...extraMeta,
+            profileUrl: ig.username
+              ? `https://www.instagram.com/${ig.username}/`
+              : null,
+          },
+        });
+      }
+
+      async function fetchIgNodeById(igId: string): Promise<void> {
+        if (discoveredById.has(igId)) return;
+        // Try full fields first, then minimal fields (id,username), then check if it's a Page wrapping an IG account
+        const fieldSets = [
+          "id,username,name,profile_picture_url",
+          "id,username",
+        ];
+        for (const fields of fieldSets) {
+          const igUrl = new URL(`${FB_GRAPH_BASE}/${igId}`);
+          igUrl.searchParams.set("fields", fields);
+          igUrl.searchParams.set("access_token", accessToken);
+          const igRes = await fetchFn(igUrl.toString());
+          if (igRes.ok) {
+            const ig = (await igRes.json()) as IGProfileResponse;
+            if (ig.id || ig.username) {
+              addInstagramAccount({
+                id: ig.id || igId,
+                username: ig.username,
+                name: ig.name,
+                profile_picture_url: ig.profile_picture_url,
+              });
+              return;
+            }
+          }
+        }
+      }
+
+      // 3A. Discover via Facebook Pages (/me/accounts)
       try {
         const pagesUrl = new URL(`${FB_GRAPH_BASE}/me/accounts`);
         pagesUrl.searchParams.set(
@@ -318,24 +374,7 @@ export function createInstagramAdapter(
               page.instagram_business_account ||
               page.connected_instagram_account;
             if (ig?.id) {
-              discoveredById.set(ig.id, {
-                platform: Platform.INSTAGRAM,
-                externalAccountId: ig.id,
-                displayName:
-                  ig.name || ig.username || page.name || "Instagram Account",
-                username: ig.username ? `@${ig.username}` : null,
-                avatarUrl: ig.profile_picture_url || null,
-                accessToken,
-                refreshToken: null,
-                tokenExpiresAt: expiresAt,
-                metadata: {
-                  graphBase: FB_GRAPH_BASE,
-                  facebookPageId: page.id,
-                  profileUrl: ig.username
-                    ? `https://www.instagram.com/${ig.username}/`
-                    : null,
-                },
-              });
+              addInstagramAccount(ig, { facebookPageId: page.id });
             }
           }
         }
@@ -343,39 +382,67 @@ export function createInstagramAdapter(
         // Continue to next discovery method
       }
 
-      // 3B. Discover via /me/businesses -> instagram_business_accounts
+      // 3B. Discover via System-User assigned Instagram accounts (Meta Unified Login)
+      for (const edge of [
+        "me/assigned_instagram_accounts",
+        "me/instagram_accounts",
+      ]) {
+        try {
+          const edgeUrl = new URL(`${FB_GRAPH_BASE}/${edge}`);
+          edgeUrl.searchParams.set(
+            "fields",
+            "id,username,name,profile_picture_url"
+          );
+          edgeUrl.searchParams.set("access_token", accessToken);
+          const edgeRes = await fetchFn(edgeUrl.toString());
+          if (edgeRes.ok) {
+            const edgeData = (await edgeRes.json()) as {
+              data?: Array<{
+                id?: string;
+                username?: string;
+                name?: string;
+                profile_picture_url?: string;
+              }>;
+            };
+            for (const ig of edgeData.data ?? []) {
+              addInstagramAccount(ig);
+            }
+          }
+        } catch {
+          // Continue
+        }
+      }
+
+      // 3C. Discover via /me/businesses -> instagram_business_accounts / owned_instagram_accounts
       try {
         const bizUrl = new URL(`${FB_GRAPH_BASE}/me/businesses`);
         bizUrl.searchParams.set(
           "fields",
-          "id,name,instagram_business_accounts{id,username,name,profile_picture_url}"
+          "id,name,instagram_business_accounts{id,username,name,profile_picture_url},owned_instagram_accounts{id,username,name,profile_picture_url}"
         );
         bizUrl.searchParams.set("access_token", accessToken);
         const bizRes = await fetchFn(bizUrl.toString());
         if (bizRes.ok) {
-          const bizData = (await bizRes.json()) as FBBusinessesResponse;
+          const bizData = (await bizRes.json()) as FBBusinessesResponse & {
+            data?: Array<{
+              id: string;
+              name?: string;
+              owned_instagram_accounts?: {
+                data?: Array<{
+                  id: string;
+                  username?: string;
+                  name?: string;
+                  profile_picture_url?: string;
+                }>;
+              };
+            }>;
+          };
           for (const biz of bizData.data ?? []) {
             for (const ig of biz.instagram_business_accounts?.data ?? []) {
-              if (ig.id && !discoveredById.has(ig.id)) {
-                discoveredById.set(ig.id, {
-                  platform: Platform.INSTAGRAM,
-                  externalAccountId: ig.id,
-                  displayName:
-                    ig.name || ig.username || biz.name || "Instagram Account",
-                  username: ig.username ? `@${ig.username}` : null,
-                  avatarUrl: ig.profile_picture_url || null,
-                  accessToken,
-                  refreshToken: null,
-                  tokenExpiresAt: expiresAt,
-                  metadata: {
-                    graphBase: FB_GRAPH_BASE,
-                    businessId: biz.id,
-                    profileUrl: ig.username
-                      ? `https://www.instagram.com/${ig.username}/`
-                      : null,
-                  },
-                });
-              }
+              addInstagramAccount(ig, { businessId: biz.id });
+            }
+            for (const ig of biz.owned_instagram_accounts?.data ?? []) {
+              addInstagramAccount(ig, { businessId: biz.id });
             }
           }
         }
@@ -383,7 +450,8 @@ export function createInstagramAdapter(
         // Continue to granular_scopes discovery
       }
 
-      // 3C. Discover via debug_token granular_scopes (finds target_ids granted during OAuth)
+      // 3D. Discover via debug_token granular_scopes (works for Unified Login without Pages or business_management)
+      let debugScopesSummary = "";
       try {
         const debugUrl = new URL(`${FB_GRAPH_BASE}/debug_token`);
         debugUrl.searchParams.set("input_token", accessToken);
@@ -391,9 +459,14 @@ export function createInstagramAdapter(
         const debugRes = await fetchFn(debugUrl.toString());
         if (debugRes.ok) {
           const debugData = (await debugRes.json()) as DebugTokenResponse;
+          const scopes = debugData.data?.granular_scopes ?? [];
+          debugScopesSummary = scopes
+            .map((s) => `${s.scope}[${(s.target_ids ?? []).length}]`)
+            .join(", ");
+
           const targetIds = new Set<string>();
-          for (const gs of debugData.data?.granular_scopes ?? []) {
-            if (gs.scope.startsWith("instagram_")) {
+          for (const gs of scopes) {
+            if (gs.scope.includes("instagram")) {
               for (const tid of gs.target_ids ?? []) {
                 targetIds.add(tid);
               }
@@ -401,33 +474,7 @@ export function createInstagramAdapter(
           }
 
           for (const igId of targetIds) {
-            if (discoveredById.has(igId)) continue;
-            const igUrl = new URL(`${FB_GRAPH_BASE}/${igId}`);
-            igUrl.searchParams.set(
-              "fields",
-              "id,username,name,profile_picture_url"
-            );
-            igUrl.searchParams.set("access_token", accessToken);
-            const igRes = await fetchFn(igUrl.toString());
-            if (igRes.ok) {
-              const ig = (await igRes.json()) as IGProfileResponse;
-              discoveredById.set(igId, {
-                platform: Platform.INSTAGRAM,
-                externalAccountId: igId,
-                displayName: ig.name || ig.username || "Instagram Account",
-                username: ig.username ? `@${ig.username}` : null,
-                avatarUrl: ig.profile_picture_url || null,
-                accessToken,
-                refreshToken: null,
-                tokenExpiresAt: expiresAt,
-                metadata: {
-                  graphBase: FB_GRAPH_BASE,
-                  profileUrl: ig.username
-                    ? `https://www.instagram.com/${ig.username}/`
-                    : null,
-                },
-              });
-            }
+            await fetchIgNodeById(igId);
           }
         }
       } catch {
@@ -437,7 +484,9 @@ export function createInstagramAdapter(
       const results = Array.from(discoveredById.values());
       if (results.length === 0) {
         throw new Error(
-          "No Instagram Creator or Business account was found on your Meta login. Make sure your Instagram account is switched to a Professional (Creator or Business) account and linked to a Facebook Page or Meta account, then click '+ Connect Instagram' again."
+          `No Instagram Professional account was returned by Meta (${
+            debugScopesSummary || "no granular_scopes target_ids"
+          }). Make sure you selected an Instagram Creator/Business account in the Meta popup.`
         );
       }
 
