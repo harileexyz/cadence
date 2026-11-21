@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import {
+  BarChart3,
   CalendarClock,
   CreditCard,
   Layers,
@@ -34,6 +35,7 @@ interface UserMeResponse {
 const AUTH_NAV_ITEMS = [
   { href: "/", label: "Queue", icon: CalendarClock },
   { href: "/compose", label: "Compose", icon: PenSquare },
+  { href: "/engagement", label: "Engagement", icon: BarChart3 },
   { href: "/accounts", label: "Channels", icon: Users },
   { href: "/pricing", label: "Plan & Billing", icon: CreditCard },
 ];
