@@ -44,6 +44,7 @@ model User {
   createdAt            DateTime        @default(now())
   updatedAt            DateTime        @updatedAt
   sessions             Session[]
+  apiKeys              ApiKey[]
   socialAccounts       SocialAccount[]
   mediaAssets          MediaAsset[]
   posts                Post[]
@@ -56,6 +57,19 @@ model Session {
   expiresAt DateTime
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model ApiKey {
+  id         String    @id @default(cuid())
+  userId     String
+  name       String
+  keyPrefix  String
+  keyHash    String    @unique
+  lastUsedAt DateTime?
+  createdAt  DateTime  @default(now())
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }

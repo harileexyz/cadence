@@ -15,6 +15,7 @@ import {
   Trash2,
   User as UserIcon,
 } from "lucide-react";
+import { DeveloperApiKeysSection } from "@/components/DeveloperApiKeysSection";
 
 interface MeResponse {
   user: {
@@ -396,6 +397,9 @@ export default function ProfilePage() {
           </button>
         </div>
       </form>
+
+      {/* Developer API Keys & Draft Upload API */}
+      <DeveloperApiKeysSection />
 
       {/* Danger Zone: Delete Account */}
       <section className="rounded-2xl border border-red-200 bg-red-50/40 p-5">

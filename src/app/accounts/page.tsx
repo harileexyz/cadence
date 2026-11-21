@@ -49,6 +49,27 @@ interface UsageDTO {
   };
 }
 
+function getTokenHealth(acc: AccountDTO): {
+  level: "ok" | "warn" | "expired";
+  label: string;
+} {
+  if (acc.platform === "YOUTUBE") {
+    return { level: "ok", label: "Auto-refresh active" };
+  }
+  if (!acc.tokenExpiresAt) {
+    return { level: "ok", label: "Meta token active" };
+  }
+  const msLeft = new Date(acc.tokenExpiresAt).getTime() - Date.now();
+  const daysLeft = Math.ceil(msLeft / (1000 * 60 * 60 * 24));
+  if (daysLeft <= 0) {
+    return { level: "expired", label: "Token expired — reconnect" };
+  }
+  if (daysLeft <= 7) {
+    return { level: "warn", label: `Expires in ${daysLeft}d — reconnect soon` };
+  }
+  return { level: "ok", label: `Token healthy · ${daysLeft}d left` };
+}
+
 function AccountsContent() {
   const searchParams = useSearchParams();
   const connectedBanner = searchParams.get("connected");
@@ -225,6 +246,28 @@ function AccountsContent() {
         <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
           <CheckCircle2 className="h-4 w-4 shrink-0" />
           <span>Channel connected successfully ({connectedBanner}).</span>
+        </div>
+      )}
+
+      {accounts.some(
+        (a) => a.isActive && getTokenHealth(a).level !== "ok"
+      ) && (
+        <div className="flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-2.5">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+            <div>
+              <p className="font-semibold">Token Health Alert</p>
+              <p className="mt-0.5 text-xs text-amber-800">
+                One or more connected Instagram tokens are expiring soon or expired. Reconnect before your next scheduled post runs.
+              </p>
+            </div>
+          </div>
+          <a
+            href="/api/auth/instagram/connect"
+            className="inline-flex shrink-0 items-center justify-center rounded-lg bg-amber-600 px-3.5 py-2 text-xs font-semibold text-white hover:bg-amber-700"
+          >
+            Reconnect Instagram
+          </a>
         </div>
       )}
 
@@ -406,6 +449,22 @@ function AccountsContent() {
                       <p className="truncate text-xs text-slate-500">
                         {acc.username || acc.externalAccountId}
                       </p>
+                      {(() => {
+                        const health = getTokenHealth(acc);
+                        return (
+                          <p
+                            className={`mt-1 text-[11px] font-medium ${
+                              health.level === "expired"
+                                ? "text-red-600"
+                                : health.level === "warn"
+                                  ? "text-amber-700"
+                                  : "text-emerald-700"
+                            }`}
+                          >
+                            ● {health.label}
+                          </p>
+                        );
+                      })()}
                       {defs && (
                         <div className="mt-1.5 flex flex-wrap gap-1.5">
                           {categoryLabel && (

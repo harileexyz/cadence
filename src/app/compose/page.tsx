@@ -17,6 +17,7 @@ import {
   X,
 } from "lucide-react";
 import { PlatformBadge } from "@/components/PlatformBadge";
+import { VideoCoverScrubber } from "@/components/VideoCoverScrubber";
 import {
   YOUTUBE_CATEGORIES,
   type AccountDefaults,
@@ -547,6 +548,21 @@ export default function ComposePage() {
               <code>{assets[0]?.publicUrl}</code>.
             </span>
           </div>
+        )}
+
+        {assets.find((a) => a.mimeType.startsWith("video/")) && (
+          <VideoCoverScrubber
+            asset={assets.find((a) => a.mimeType.startsWith("video/"))!}
+            currentReelOffsetSec={igThumbOffsetSec}
+            hasYouTube={hasYouTube}
+            hasInstagram={hasInstagram}
+            ytIsShort={ytIsShort}
+            onSetReelOffsetSec={(sec) => setIgThumbOffsetSec(sec)}
+            onCaptureYouTubeThumbnail={async (file) => {
+              const uploaded = await uploadSingleFile(file);
+              setYtThumbnailAsset(uploaded);
+            }}
+          />
         )}
       </section>
 
