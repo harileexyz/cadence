@@ -77,5 +77,9 @@ export async function getCurrentUser(): Promise<User | null> {
     return null;
   }
 
+  if (session.user.isSuspended) {
+    return null;
+  }
+
   return session.user;
 }

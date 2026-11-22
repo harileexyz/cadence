@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { evaluateRegistrationAccess } from "@/lib/admin";
 import { createSession, hashPassword } from "@/lib/auth";
 import { getGoogleOAuthConfig } from "@/lib/env";
 import { prisma } from "@/lib/prisma";
@@ -58,16 +59,39 @@ export async function GET(request: Request) {
     }
 
     const email = profile.email.toLowerCase().trim();
-    const user = await prisma.user.upsert({
-      where: { email },
-      update: {},
-      create: {
-        email,
-        name: profile.name || email.split("@")[0],
-        passwordHash: hashPassword(crypto.randomBytes(24).toString("hex")),
-        plan: "FREE",
-      },
-    });
+    let user = await prisma.user.findUnique({ where: { email } });
+
+    if (user) {
+      if (user.isSuspended) {
+        throw new Error(
+          "This account has been suspended. Contact the founder for assistance."
+        );
+      }
+    } else {
+      const access = await evaluateRegistrationAccess({ email });
+      if (!access.allowed) {
+        throw new Error(
+          access.reason || "Cadence is currently in Private Beta."
+        );
+      }
+
+      user = await prisma.user.create({
+        data: {
+          email,
+          name: profile.name || email.split("@")[0],
+          passwordHash: hashPassword(crypto.randomBytes(24).toString("hex")),
+          plan: access.matchedInvite ? access.matchedInvite.grantPlan : "FREE",
+          isBetaTester: Boolean(access.matchedInvite),
+        },
+      });
+
+      if (access.matchedInvite) {
+        await prisma.betaInvite.update({
+          where: { id: access.matchedInvite.id },
+          data: { usedAt: new Date(), usedByEmail: email },
+        });
+      }
+    }
 
     await createSession(user.id);
     return NextResponse.redirect(new URL("/", origin));

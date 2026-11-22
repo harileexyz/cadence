@@ -7,7 +7,12 @@ const globalForPrisma = globalThis as unknown as {
 const cached = globalForPrisma.prisma;
 
 export const prisma =
-  cached && "user" in cached && "session" in cached && "apiKey" in cached
+  cached &&
+  "user" in cached &&
+  "session" in cached &&
+  "apiKey" in cached &&
+  "betaInvite" in cached &&
+  "systemSetting" in cached
     ? cached
     : new PrismaClient({
         log:

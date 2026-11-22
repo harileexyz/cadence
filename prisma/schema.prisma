@@ -39,6 +39,8 @@ model User {
   name                 String
   passwordHash         String
   plan                 PlanTier        @default(FREE)
+  isBetaTester         Boolean         @default(false)
+  isSuspended          Boolean         @default(false)
   stripeCustomerId     String?
   stripeSubscriptionId String?
   createdAt            DateTime        @default(now())
@@ -48,6 +50,24 @@ model User {
   socialAccounts       SocialAccount[]
   mediaAssets          MediaAsset[]
   posts                Post[]
+}
+
+model BetaInvite {
+  id          String    @id @default(cuid())
+  email       String    @unique
+  code        String    @unique
+  grantPlan   PlanTier  @default(PRO)
+  note        String?
+  invitedBy   String
+  usedAt      DateTime?
+  usedByEmail String?
+  createdAt   DateTime  @default(now())
+}
+
+model SystemSetting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
 }
 
 model Session {

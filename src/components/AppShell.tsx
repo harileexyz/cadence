@@ -61,13 +61,31 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [me, setMe] = useState<UserMeResponse | null>(null);
+  const [banner, setBanner] = useState<{
+    enabled: boolean;
+    message: string;
+    tone: "info" | "success" | "warn";
+  } | null>(null);
 
   const loadMe = useCallback(async () => {
     try {
-      const res = await fetch("/api/user/me");
-      if (res.ok) {
-        const data = (await res.json()) as UserMeResponse;
+      const [meRes, annRes] = await Promise.all([
+        fetch("/api/user/me"),
+        fetch("/api/system/announcement"),
+      ]);
+      if (meRes.ok) {
+        const data = (await meRes.json()) as UserMeResponse;
         setMe(data);
+      }
+      if (annRes.ok) {
+        const ann = (await annRes.json()) as {
+          banner?: {
+            enabled: boolean;
+            message: string;
+            tone: "info" | "success" | "warn";
+          };
+        };
+        setBanner(ann.banner ?? null);
       }
     } catch {
       // ignore
@@ -392,6 +410,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </header>
 
         <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 pb-24 sm:px-6 md:px-8 md:py-8 md:pb-8">
+          {banner?.enabled && banner.message && (
+            <div
+              className={`mb-5 rounded-xl border px-4 py-2.5 text-xs font-medium ${
+                banner.tone === "warn"
+                  ? "border-amber-200 bg-amber-50 text-amber-900"
+                  : banner.tone === "success"
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+                    : "border-indigo-200 bg-indigo-50 text-indigo-900"
+              }`}
+            >
+              {banner.message}
+            </div>
+          )}
           {children}
         </main>
         <Footer />

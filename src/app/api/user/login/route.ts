@@ -27,6 +27,13 @@ export async function POST(request: Request) {
     );
   }
 
+  if (user.isSuspended) {
+    return NextResponse.json(
+      { error: "This account has been suspended. Contact the founder for assistance." },
+      { status: 403 }
+    );
+  }
+
   await createSession(user.id);
 
   return NextResponse.json({

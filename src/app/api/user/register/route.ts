@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { evaluateRegistrationAccess } from "@/lib/admin";
 import { createSession, hashPassword } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
@@ -7,6 +8,7 @@ const registerSchema = z.object({
   name: z.string().min(1, "Name is required").max(80),
   email: z.string().email("Enter a valid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),
+  inviteCode: z.string().max(40).optional(),
 });
 
 export async function POST(request: Request) {
@@ -28,14 +30,33 @@ export async function POST(request: Request) {
     );
   }
 
+  const access = await evaluateRegistrationAccess({
+    email,
+    inviteCode: parsed.data.inviteCode,
+  });
+  if (!access.allowed) {
+    return NextResponse.json(
+      { error: access.reason || "Private beta invite required." },
+      { status: 403 }
+    );
+  }
+
   const user = await prisma.user.create({
     data: {
       email,
       name: parsed.data.name.trim(),
       passwordHash: hashPassword(parsed.data.password),
-      plan: "FREE",
+      plan: access.matchedInvite ? access.matchedInvite.grantPlan : "FREE",
+      isBetaTester: Boolean(access.matchedInvite),
     },
   });
+
+  if (access.matchedInvite) {
+    await prisma.betaInvite.update({
+      where: { id: access.matchedInvite.id },
+      data: { usedAt: new Date(), usedByEmail: email },
+    });
+  }
 
   await createSession(user.id);
 
