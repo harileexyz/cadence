@@ -304,15 +304,32 @@ export function createYouTubeAdapter(fetchFn: typeof fetch = fetch): PlatformAda
         );
       }
 
-      const videoBuffer = await input.storage.getBuffer(asset.storageKey);
-      const uploadRes = await fetchFn(uploadUrl, {
-        method: "PUT",
-        headers: {
-          "Content-Type": asset.mimeType,
-          "Content-Length": String(videoBuffer.byteLength),
-        },
-        body: new Uint8Array(videoBuffer),
-      });
+      let uploadRes: Response;
+      const streamedObj = input.storage.getReadableStream
+        ? await input.storage.getReadableStream(asset.storageKey)
+        : null;
+      if (streamedObj?.stream) {
+        const initWithDuplex: RequestInit & { duplex: "half" } = {
+          method: "PUT",
+          headers: {
+            "Content-Type": asset.mimeType,
+            "Content-Length": String(streamedObj.sizeBytes ?? asset.sizeBytes),
+          },
+          body: streamedObj.stream,
+          duplex: "half",
+        };
+        uploadRes = await fetchFn(uploadUrl, initWithDuplex);
+      } else {
+        const videoBuffer = await input.storage.getBuffer(asset.storageKey);
+        uploadRes = await fetchFn(uploadUrl, {
+          method: "PUT",
+          headers: {
+            "Content-Type": asset.mimeType,
+            "Content-Length": String(videoBuffer.byteLength),
+          },
+          body: new Uint8Array(videoBuffer),
+        });
+      }
 
       if (!uploadRes.ok) {
         const errText = await uploadRes.text();

@@ -1,7 +1,9 @@
 import fs from "node:fs/promises";
-import { createReadStream } from "node:fs";
+import { createReadStream, createWriteStream } from "node:fs";
 import path from "node:path";
 import { Readable } from "node:stream";
+import { pipeline } from "node:stream/promises";
+import type { ReadableStream as NodeWebReadableStream } from "node:stream/web";
 import type { StorageProvider } from "./index";
 import { getPublicMediaBaseUrl } from "@/lib/env";
 
@@ -36,6 +38,10 @@ export class LocalStorageProvider implements StorageProvider {
     return `${getPublicMediaBaseUrl()}/api/media/${encodedPath}`;
   }
 
+  resolveFilePath(key: string): string {
+    return this.resolvePath(key);
+  }
+
   async upload(params: {
     key: string;
     buffer: Buffer;
@@ -48,6 +54,28 @@ export class LocalStorageProvider implements StorageProvider {
     return {
       key: safeKey,
       publicUrl: this.getPublicUrl(safeKey),
+    };
+  }
+
+  async uploadStream(params: {
+    key: string;
+    stream: ReadableStream<Uint8Array>;
+    contentType: string;
+  }): Promise<{ key: string; publicUrl: string; filePath: string; sizeBytes: number }> {
+    const safeKey = sanitizeKey(params.key);
+    const targetPath = this.resolvePath(safeKey);
+    await fs.mkdir(path.dirname(targetPath), { recursive: true });
+    const nodeReadable = Readable.fromWeb(
+      params.stream as unknown as NodeWebReadableStream
+    );
+    const writeStream = createWriteStream(targetPath);
+    await pipeline(nodeReadable, writeStream);
+    const stat = await fs.stat(targetPath);
+    return {
+      key: safeKey,
+      publicUrl: this.getPublicUrl(safeKey),
+      filePath: targetPath,
+      sizeBytes: stat.size,
     };
   }
 

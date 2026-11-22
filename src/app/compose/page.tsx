@@ -189,17 +189,35 @@ export default function ComposePage() {
   }
 
   async function uploadSingleFile(file: File): Promise<UploadedAsset> {
-    const formData = new FormData();
-    formData.append("file", file);
-
     const res = await fetch("/api/media/upload", {
       method: "POST",
-      body: formData,
+      headers: {
+        "Content-Type": file.type || "application/octet-stream",
+        "X-File-Name": encodeURIComponent(file.name),
+        "X-File-Type": file.type || "application/octet-stream",
+        "X-File-Size": String(file.size),
+      },
+      body: file,
     });
-    const data = (await res.json()) as {
-      asset?: UploadedAsset;
-      error?: string;
-    };
+    const rawText = await res.text();
+    let data: { asset?: UploadedAsset; error?: string } = {};
+    if (rawText.trim()) {
+      try {
+        data = JSON.parse(rawText) as {
+          asset?: UploadedAsset;
+          error?: string;
+        };
+      } catch {
+        throw new Error(
+          `Server returned an invalid response (HTTP ${res.status}) while uploading ${file.name}.`
+        );
+      }
+    } else if (!res.ok) {
+      throw new Error(
+        `Upload interrupted (HTTP ${res.status}) for ${file.name}. Please try again.`
+      );
+    }
+
     if (!res.ok || !data.asset) {
       throw new Error(data.error || `Upload failed for ${file.name}`);
     }

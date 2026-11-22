@@ -9,6 +9,12 @@ export interface StorageProvider {
     buffer: Buffer;
     contentType: string;
   }): Promise<{ key: string; publicUrl: string }>;
+  uploadStream?(params: {
+    key: string;
+    stream: ReadableStream<Uint8Array>;
+    contentType: string;
+  }): Promise<{ key: string; publicUrl: string; filePath?: string; sizeBytes: number }>;
+  resolveFilePath?(key: string): string;
   getPublicUrl(key: string): string;
   has?(key: string): Promise<boolean>;
   getBuffer(key: string): Promise<Buffer>;

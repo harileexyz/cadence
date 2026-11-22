@@ -4,7 +4,7 @@ import { Platform, PostStatus, Prisma, TargetStatus } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { authenticateApiRequest } from "@/lib/apiKeys";
 import { getAppUrl, isS3Configured } from "@/lib/env";
-import { probeMediaBuffer } from "@/lib/media/probe";
+import { probeMediaBuffer, probeMediaFile } from "@/lib/media/probe";
 import { getUserUsageSummary, PLAN_SPECS } from "@/lib/plans";
 import type { AccountDefaults } from "@/lib/platforms/types";
 import { prisma } from "@/lib/prisma";
@@ -137,19 +137,42 @@ export async function POST(request: Request) {
       }
     }
 
-    // Upload main media asset
-    const mainBuffer = Buffer.from(await file.arrayBuffer());
+    // Upload main media asset via streaming when available to keep RAM footprint tiny
+    const storage = getStorageProvider();
     const mainExt = path.extname(file.name).replace(/^\./, "") || "mp4";
     const mainKey = `${user.id}-${Date.now()}-${crypto.randomUUID()}.${mainExt}`;
 
-    const [mainMeta, mainStored] = await Promise.all([
-      probeMediaBuffer(mainBuffer, mainExt),
-      getStorageProvider().upload({
+    let mainMeta: Awaited<ReturnType<typeof probeMediaBuffer>>;
+    let mainStored: { key: string; publicUrl: string };
+
+    if (storage.uploadStream) {
+      const streamed = await storage.uploadStream({
         key: mainKey,
-        buffer: mainBuffer,
+        stream: file.stream(),
         contentType: file.type,
-      }),
-    ]);
+      });
+      mainStored = { key: streamed.key, publicUrl: streamed.publicUrl };
+      mainMeta = streamed.filePath
+        ? await probeMediaFile(streamed.filePath)
+        : {
+            width: null,
+            height: null,
+            durationSec: null,
+            videoCodec: null,
+            audioCodec: null,
+            formatName: null,
+          };
+    } else {
+      const mainBuffer = Buffer.from(await file.arrayBuffer());
+      [mainMeta, mainStored] = await Promise.all([
+        probeMediaBuffer(mainBuffer, mainExt),
+        storage.upload({
+          key: mainKey,
+          buffer: mainBuffer,
+          contentType: file.type,
+        }),
+      ]);
+    }
 
     const mainAsset = await prisma.mediaAsset.create({
       data: {
@@ -162,7 +185,7 @@ export async function POST(request: Request) {
         durationSec: mainMeta.durationSec,
         storageKey: mainStored.key,
         publicUrl: mainStored.publicUrl,
-        fileData: isS3Configured() ? null : mainBuffer,
+        fileData: null,
       },
       select: {
         id: true,
@@ -172,6 +195,19 @@ export async function POST(request: Request) {
         durationSec: true,
       },
     });
+
+    if (!isS3Configured() && file.size <= 22 * 1024 * 1024) {
+      try {
+        const diskBuf = await storage.getBuffer(mainStored.key);
+        await prisma.mediaAsset.update({
+          where: { id: mainAsset.id },
+          data: { fileData: new Uint8Array(diskBuf) },
+          select: { id: true },
+        });
+      } catch {
+        // non-fatal
+      }
+    }
 
     // Optional custom thumbnail upload
     let thumbnailAssetId: string | undefined;

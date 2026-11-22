@@ -31,21 +31,10 @@ interface FFprobeOutput {
   };
 }
 
-/**
- * Inspects a media buffer with `ffprobe` to extract dimensions, duration, and codecs.
- * Returns null fields gracefully if ffprobe is unavailable or fails on an unknown format.
- */
-export async function probeMediaBuffer(
-  buffer: Buffer,
-  extension = "bin"
+export async function probeMediaFile(
+  filePath: string
 ): Promise<MediaMetadata> {
-  const tempPath = path.join(
-    os.tmpdir(),
-    `buffer-probe-${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`
-  );
-
   try {
-    await fs.writeFile(tempPath, buffer);
     const { stdout } = await execFileAsync("ffprobe", [
       "-v",
       "quiet",
@@ -53,7 +42,7 @@ export async function probeMediaBuffer(
       "json",
       "-show_format",
       "-show_streams",
-      tempPath,
+      filePath,
     ]);
 
     const parsed = JSON.parse(stdout) as FFprobeOutput;
@@ -73,6 +62,34 @@ export async function probeMediaBuffer(
       audioCodec: audioStream?.codec_name ?? null,
       formatName: parsed.format?.format_name ?? null,
     };
+  } catch {
+    return {
+      width: null,
+      height: null,
+      durationSec: null,
+      videoCodec: null,
+      audioCodec: null,
+      formatName: null,
+    };
+  }
+}
+
+/**
+ * Inspects a media buffer with `ffprobe` to extract dimensions, duration, and codecs.
+ * Returns null fields gracefully if ffprobe is unavailable or fails on an unknown format.
+ */
+export async function probeMediaBuffer(
+  buffer: Buffer,
+  extension = "bin"
+): Promise<MediaMetadata> {
+  const tempPath = path.join(
+    os.tmpdir(),
+    `buffer-probe-${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`
+  );
+
+  try {
+    await fs.writeFile(tempPath, buffer);
+    return await probeMediaFile(tempPath);
   } catch {
     return {
       width: null,
