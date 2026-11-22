@@ -12,6 +12,7 @@ import {
   ExternalLink,
   Eye,
   Heart,
+  Instagram,
   Layers,
   Loader2,
   MessageCircle,
@@ -21,6 +22,7 @@ import {
   Search,
   Sparkles,
   Users,
+  Youtube,
 } from "lucide-react";
 import { ContentViewerModal } from "@/components/ContentViewerModal";
 import { CrossPlatformComparison } from "@/components/CrossPlatformComparison";
@@ -260,69 +262,112 @@ export default function EngagementPage() {
         </div>
       ) : (
         <>
-          {/* Account Switcher Bar (Wraps cleanly so no account pill is ever clipped) */}
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={() => selectAccount("ALL")}
-              className={`inline-flex shrink-0 items-center gap-2 rounded-full border px-3.5 py-2 text-xs font-semibold transition ${
-                effectiveAccountId === "ALL"
-                  ? "border-slate-900 bg-slate-900 text-white shadow-xs"
-                  : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
-              }`}
-            >
-              <Layers className="h-3.5 w-3.5" />
-              <span>All Channels</span>
-              <span
-                className={`rounded-full px-1.5 py-0.5 text-[10px] ${
+          {/* Account Switcher Bar — Grouped by Platform with unmistakable YT / IG badges */}
+          <div className="space-y-2.5 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-2xs">
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => selectAccount("ALL")}
+                className={`inline-flex shrink-0 items-center gap-2 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition ${
                   effectiveAccountId === "ALL"
-                    ? "bg-white/20 text-white"
-                    : "bg-slate-100 text-slate-600"
+                    ? "border-slate-900 bg-slate-900 text-white shadow-xs"
+                    : "border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300 hover:bg-slate-100"
                 }`}
               >
-                {data.channels.length}
-              </span>
-            </button>
-
-            {data.channels.map((ch) => {
-              const isSelected = effectiveAccountId === ch.accountId;
-              const dotColor =
-                ch.platform === "YOUTUBE" ? "bg-red-500" : "bg-pink-500";
-              return (
-                <button
-                  key={ch.accountId}
-                  type="button"
-                  onClick={() => selectAccount(ch.accountId)}
-                  className={`inline-flex shrink-0 items-center gap-2 rounded-full border py-1.5 pr-3.5 pl-2 text-xs font-semibold transition ${
-                    isSelected
-                      ? "border-indigo-600 bg-indigo-600 text-white shadow-xs"
-                      : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+                <Layers className="h-3.5 w-3.5" />
+                <span>All Channels</span>
+                <span
+                  className={`rounded-full px-1.5 py-0.5 text-[10px] ${
+                    effectiveAccountId === "ALL"
+                      ? "bg-white/20 text-white"
+                      : "bg-white text-slate-600"
                   }`}
                 >
-                  <span className="relative flex h-6 w-6 shrink-0">
-                    {ch.avatarUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={ch.avatarUrl}
-                        alt={ch.displayName}
-                        referrerPolicy="no-referrer"
-                        className="h-6 w-6 rounded-full object-cover"
-                      />
-                    ) : (
-                      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-200 text-[10px] font-bold text-slate-700">
-                        {ch.displayName.charAt(0).toUpperCase()}
-                      </span>
-                    )}
+                  {data.channels.length}
+                </span>
+              </button>
+
+              {(["YOUTUBE", "INSTAGRAM"] as const).map((platform) => {
+                const group = data.channels.filter(
+                  (c) => c.platform === platform
+                );
+                if (group.length === 0) return null;
+                const isYt = platform === "YOUTUBE";
+
+                return (
+                  <div
+                    key={platform}
+                    className="flex flex-wrap items-center gap-1.5"
+                  >
+                    <span className="hidden h-5 w-px bg-slate-200 sm:inline-block" />
                     <span
-                      className={`absolute -right-0.5 -bottom-0.5 h-2.5 w-2.5 rounded-full ring-2 ${
-                        isSelected ? "ring-indigo-600" : "ring-white"
-                      } ${dotColor}`}
-                    />
-                  </span>
-                  <span className="max-w-[140px] truncate">{ch.displayName}</span>
-                </button>
-              );
-            })}
+                      className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-bold uppercase tracking-wide ${
+                        isYt
+                          ? "bg-red-50 text-red-700"
+                          : "bg-fuchsia-50 text-fuchsia-700"
+                      }`}
+                    >
+                      {isYt ? (
+                        <Youtube className="h-3 w-3" />
+                      ) : (
+                        <Instagram className="h-3 w-3" />
+                      )}
+                      <span>{isYt ? "YouTube" : "Instagram"}</span>
+                    </span>
+
+                    {group.map((ch) => {
+                      const isSelected = effectiveAccountId === ch.accountId;
+                      return (
+                        <button
+                          key={ch.accountId}
+                          type="button"
+                          onClick={() => selectAccount(ch.accountId)}
+                          className={`inline-flex shrink-0 items-center gap-2 rounded-full border py-1 pr-3 pl-1.5 text-xs font-semibold transition ${
+                            isSelected
+                              ? isYt
+                                ? "border-red-600 bg-red-600 text-white shadow-xs"
+                                : "border-fuchsia-600 bg-gradient-to-r from-fuchsia-600 to-pink-600 text-white shadow-xs"
+                              : isYt
+                                ? "border-red-200/80 bg-red-50/40 text-slate-800 hover:border-red-300 hover:bg-red-50"
+                                : "border-fuchsia-200/80 bg-fuchsia-50/40 text-slate-800 hover:border-fuchsia-300 hover:bg-fuchsia-50"
+                          }`}
+                        >
+                          {ch.avatarUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={ch.avatarUrl}
+                              alt={ch.displayName}
+                              referrerPolicy="no-referrer"
+                              className="h-5 w-5 shrink-0 rounded-full object-cover ring-1 ring-white/80"
+                            />
+                          ) : (
+                            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-200 text-[10px] font-bold text-slate-700">
+                              {ch.displayName.charAt(0).toUpperCase()}
+                            </span>
+                          )}
+                          <span className="max-w-[130px] truncate">
+                            {ch.displayName}
+                          </span>
+                          {isYt ? (
+                            <Youtube
+                              className={`h-3.5 w-3.5 shrink-0 ${
+                                isSelected ? "text-white/90" : "text-red-600"
+                              }`}
+                            />
+                          ) : (
+                            <Instagram
+                              className={`h-3.5 w-3.5 shrink-0 ${
+                                isSelected ? "text-white/90" : "text-fuchsia-600"
+                              }`}
+                            />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
           {/* Dedicated Single-Account Header Banner */}
