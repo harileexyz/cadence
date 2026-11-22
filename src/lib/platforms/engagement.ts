@@ -382,6 +382,56 @@ export async function fetchInstagramEngagement(
           // Ignore comment fetch errors on individual posts
         }
       }
+
+      // 4. Best-effort Reel/Video views via Instagram Insights API (requires instagram_manage_insights)
+      const videoPosts = base.recentPosts
+        .filter((p) => p.mediaType === "VIDEO" || p.mediaType === "REELS")
+        .slice(0, 15);
+      if (videoPosts.length > 0) {
+        const insightResults = await Promise.allSettled(
+          videoPosts.map(async (post) => {
+            for (const metric of ["views", "plays"]) {
+              const insRes = await fetchFn(
+                `${graphBase}/${encodeURIComponent(
+                  post.id
+                )}/insights?metric=${metric}&access_token=${encodeURIComponent(
+                  accessToken
+                )}`,
+                { cache: "no-store" }
+              );
+              if (!insRes || !insRes.ok) continue;
+              const insData = (await insRes.json()) as {
+                data?: Array<{
+                  name?: string;
+                  values?: Array<{ value?: number }>;
+                }>;
+              };
+              const val = insData.data?.[0]?.values?.[0]?.value;
+              if (typeof val === "number" && Number.isFinite(val)) {
+                return { id: post.id, views: val };
+              }
+            }
+            return null;
+          })
+        );
+
+        let summedViews = 0;
+        let hasAnyViews = false;
+        const viewsById = new Map<string, number>();
+        for (const r of insightResults) {
+          if (r.status === "fulfilled" && r.value) {
+            viewsById.set(r.value.id, r.value.views);
+            summedViews += r.value.views;
+            hasAnyViews = true;
+          }
+        }
+        if (hasAnyViews) {
+          base.totalViews = summedViews;
+          base.recentPosts = base.recentPosts.map((p) =>
+            viewsById.has(p.id) ? { ...p, views: viewsById.get(p.id)! } : p
+          );
+        }
+      }
     }
 
     return base;

@@ -157,6 +157,15 @@ describe("engagement analytics fetchers", () => {
           }),
           { status: 200 }
         )
+      )
+      // 4. IG insights (views) for post 1
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            data: [{ name: "views", values: [{ value: 56 }] }],
+          }),
+          { status: 200 }
+        )
       );
 
     const account = {
@@ -174,6 +183,8 @@ describe("engagement analytics fetchers", () => {
     expect(result.error).toBeUndefined();
     expect(result.followersCount).toBe(3400);
     expect(result.totalPosts).toBe(42);
+    expect(result.totalViews).toBe(56);
+    expect(result.recentPosts[0].views).toBe(56);
     expect(result.recentPosts[0].likes).toBe(245);
     expect(result.recentComments[0].authorName).toBe("@fan_account");
   });

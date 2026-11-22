@@ -193,6 +193,12 @@ export function CrossPlatformComparison({
                     {pair.instagram.accountName}
                   </p>
                   <div className="mt-2 flex flex-wrap items-center gap-2.5 text-xs font-bold text-slate-900">
+                    {pair.instagram.views !== null && (
+                      <span className="inline-flex items-center gap-1" title="Views">
+                        <Eye className="h-3 w-3 text-emerald-600" />
+                        {formatCompactNumber(pair.instagram.views)}
+                      </span>
+                    )}
                     <span className="inline-flex items-center gap-1" title="Likes">
                       <Heart className="h-3 w-3 text-pink-500" />
                       {formatCompactNumber(pair.instagram.likes)}
