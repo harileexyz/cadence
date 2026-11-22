@@ -168,4 +168,45 @@ describe("analytics helpers", () => {
     expect(auto?.combinedLikes).toBe(30);
     expect(auto?.combinedComments).toBe(6);
   });
+
+  it("matches YouTube question title against narrative Instagram caption when keywords appear past 180 chars", () => {
+    const narasimhaPosts: PostEngagementDTO[] = [
+      {
+        id: "yt_narasimha",
+        platform: "YOUTUBE",
+        accountId: "acc-yt",
+        accountName: "Myth Lantern",
+        title:
+          "Why Did Vishnu Burst Out of a Stone Pillar at Twilight? | Narasimha & Prahlada #Shorts",
+        description: "Full story from Bhagavata Purana.",
+        thumbnailUrl: null,
+        url: "https://youtube.com/watch?v=yt_narasimha",
+        publishedAt: "2026-11-22T05:45:00Z",
+        views: 15,
+        likes: 0,
+        comments: 1,
+      },
+      {
+        id: "ig_narasimha",
+        platform: "INSTAGRAM",
+        accountId: "acc-ig",
+        accountName: "Myth Lantern (Hindu mythology)",
+        title:
+          "King Hiranyakashipu thought his boon from Brahma made him invincible—untouchable by day or",
+        description:
+          "King Hiranyakashipu thought his boon from Brahma made him invincible—untouchable by day or night, indoors or outdoors, on earth or in the sky, by man, beast, or any weapon. Yet when he struck a palace pillar to mock his son Prahlada's faith, Lord Narasimha emerged at twilight and honored every word of the boon while breaking every loophole. #Narasimha #Prahlada #HinduMythology #BhagavataPurana #Vishnu #MythLantern #Shorts",
+        thumbnailUrl: null,
+        url: "https://instagram.com/reel/ig_narasimha",
+        publishedAt: "2026-11-22T05:46:00Z",
+        views: null,
+        likes: 2,
+        comments: 1,
+      },
+    ];
+
+    const pairs = matchCrossPostedPairs(narasimhaPosts);
+    expect(pairs).toHaveLength(1);
+    expect(pairs[0].youtube.id).toBe("yt_narasimha");
+    expect(pairs[0].instagram.id).toBe("ig_narasimha");
+  });
 });

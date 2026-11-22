@@ -1,7 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import {
   ArrowLeftRight,
+  ChevronDown,
+  ChevronUp,
   Eye,
   Heart,
   MessageCircle,
@@ -25,6 +28,8 @@ export function CrossPlatformComparison({
   onPreviewPost: (post: PostEngagementDTO) => void;
   scopeLabel?: string;
 }) {
+  const [showAll, setShowAll] = useState(false);
+
   if (pairs.length === 0) {
     return (
       <section className="rounded-2xl border border-dashed border-slate-200 bg-white p-5">
@@ -47,6 +52,8 @@ export function CrossPlatformComparison({
     );
   }
 
+  const visiblePairs = showAll ? pairs : pairs.slice(0, 8);
+
   return (
     <section className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -64,10 +71,30 @@ export function CrossPlatformComparison({
             Side-by-side YouTube Shorts vs. Instagram Reels performance for the same video
           </p>
         </div>
+
+        {pairs.length > 8 && (
+          <button
+            type="button"
+            onClick={() => setShowAll((prev) => !prev)}
+            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+          >
+            {showAll ? (
+              <>
+                <ChevronUp className="h-3.5 w-3.5" />
+                <span>Show Less</span>
+              </>
+            ) : (
+              <>
+                <ChevronDown className="h-3.5 w-3.5" />
+                <span>Show All ({pairs.length})</span>
+              </>
+            )}
+          </button>
+        )}
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        {pairs.slice(0, 6).map((pair) => {
+        {visiblePairs.map((pair) => {
           const igShare = 100 - pair.ytEngagementShare;
           return (
             <div

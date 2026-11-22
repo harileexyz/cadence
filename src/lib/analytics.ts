@@ -229,9 +229,10 @@ export function formatRelativeDate(iso: string): string {
 }
 
 function normalizeTitleTokens(raw: string): { normalized: string; tokens: Set<string> } {
+  // Keep hashtag words (strip '#' symbol rather than deleting the whole tag)
   const cleaned = raw
     .toLowerCase()
-    .replace(/#[a-z0-9_]+/g, " ")
+    .replace(/#/g, " ")
     .replace(/[^a-z0-9\s]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
@@ -250,6 +251,14 @@ function normalizeTitleTokens(raw: string): { normalized: string; tokens: Set<st
     "when",
     "how",
     "why",
+    "did",
+    "was",
+    "are",
+    "his",
+    "her",
+    "not",
+    "can",
+    "out",
     "shorts",
     "reels",
     "video",
@@ -264,11 +273,22 @@ function normalizeTitleTokens(raw: string): { normalized: string; tokens: Set<st
   return { normalized: cleaned, tokens };
 }
 
+function sameBrandAccount(aName: string, bName: string): boolean {
+  const cleanA = aName.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const cleanB = bName.toLowerCase().replace(/[^a-z0-9]/g, "");
+  if (!cleanA || !cleanB) return false;
+  return (
+    cleanA === cleanB ||
+    cleanA.includes(cleanB.slice(0, 8)) ||
+    cleanB.includes(cleanA.slice(0, 8))
+  );
+}
+
 function titleSimilarity(a: PostEngagementDTO, b: PostEngagementDTO): number {
-  const textA = `${a.title} ${(a.description || "").slice(0, 180)}`;
-  const textB = `${b.title} ${(b.description || "").slice(0, 180)}`;
-  const na = normalizeTitleTokens(textA);
-  const nb = normalizeTitleTokens(textB);
+  const fullA = `${a.title} ${a.description || ""}`;
+  const fullB = `${b.title} ${b.description || ""}`;
+  const na = normalizeTitleTokens(fullA);
+  const nb = normalizeTitleTokens(fullB);
   const titleA = normalizeTitleTokens(a.title);
   const titleB = normalizeTitleTokens(b.title);
 
@@ -281,22 +301,53 @@ function titleSimilarity(a: PostEngagementDTO, b: PostEngagementDTO): number {
     }
   }
 
-  if (na.tokens.size === 0 || nb.tokens.size === 0) return 0;
-
   let overlap = 0;
-  for (const t of na.tokens) {
+  for (const t of titleA.tokens) {
     if (nb.tokens.has(t)) overlap++;
   }
-  const minSize = Math.min(na.tokens.size, nb.tokens.size);
-  const union = new Set([...na.tokens, ...nb.tokens]).size;
-  const jaccard = union > 0 ? overlap / union : 0;
-  const containment = minSize > 0 ? overlap / minSize : 0;
-
-  // Strong match if at least 2 meaningful keywords overlap and either Jaccard >= 0.22 or containment >= 0.4
-  if (overlap >= 2 && (jaccard >= 0.22 || containment >= 0.4)) {
-    return Math.max(jaccard, containment * 0.8);
+  for (const t of titleB.tokens) {
+    if (na.tokens.has(t)) overlap++;
   }
-  return jaccard;
+
+  let fullOverlap = 0;
+  for (const t of na.tokens) {
+    if (nb.tokens.has(t)) fullOverlap++;
+  }
+
+  const minTitleSize = Math.max(
+    1,
+    Math.min(titleA.tokens.size || 1, titleB.tokens.size || 1)
+  );
+  const titleContainment = fullOverlap / minTitleSize;
+  const union = new Set([...na.tokens, ...nb.tokens]).size;
+  const jaccard = union > 0 ? fullOverlap / union : 0;
+
+  // Same-brand posts published within 3 hours of each other get a timestamp proximity boost
+  const timeDiffHours =
+    Math.abs(
+      new Date(a.publishedAt).getTime() - new Date(b.publishedAt).getTime()
+    ) /
+    (1000 * 60 * 60);
+  const sameBrand = sameBrandAccount(a.accountName, b.accountName);
+  const proximityBoost =
+    sameBrand && timeDiffHours <= 3
+      ? 0.25
+      : sameBrand && timeDiffHours <= 24
+        ? 0.12
+        : 0;
+
+  if (fullOverlap >= 2) {
+    return Math.min(
+      0.94,
+      Math.max(jaccard, Math.min(1, titleContainment) * 0.55) + proximityBoost
+    );
+  }
+
+  if (sameBrand && timeDiffHours <= 1.5 && (fullOverlap >= 1 || overlap >= 1)) {
+    return 0.45;
+  }
+
+  return jaccard + proximityBoost;
 }
 
 export function matchCrossPostedPairs(

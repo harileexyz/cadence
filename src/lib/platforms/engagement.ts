@@ -91,7 +91,7 @@ export async function fetchYouTubeEngagement(
       `${YOUTUBE_API_BASE}/channels?part=snippet,statistics,contentDetails&id=${encodeURIComponent(
         account.externalAccountId
       )}`,
-      { headers }
+      { headers, cache: "no-store" }
     );
     if (!chRes.ok) {
       const txt = await chRes.text();
@@ -125,13 +125,13 @@ export async function fetchYouTubeEngagement(
 
     const uploadsPlaylistId = channel.contentDetails?.relatedPlaylists?.uploads;
 
-    // 2. Fetch up to 10 most recent uploaded videos (1 unit) + their statistics (1 unit)
+    // 2. Fetch up to 25 most recent uploaded videos (1 unit) + their statistics (1 unit)
     if (uploadsPlaylistId) {
       const plRes = await fetchFn(
         `${YOUTUBE_API_BASE}/playlistItems?part=contentDetails&playlistId=${encodeURIComponent(
           uploadsPlaylistId
-        )}&maxResults=10`,
-        { headers }
+        )}&maxResults=25`,
+        { headers, cache: "no-store" }
       );
       if (plRes.ok) {
         const plData = (await plRes.json()) as {
@@ -146,7 +146,7 @@ export async function fetchYouTubeEngagement(
             `${YOUTUBE_API_BASE}/videos?part=snippet,statistics&id=${encodeURIComponent(
               videoIds.join(",")
             )}`,
-            { headers }
+            { headers, cache: "no-store" }
           );
           if (vidRes.ok) {
             const vidData = (await vidRes.json()) as {
@@ -201,7 +201,7 @@ export async function fetchYouTubeEngagement(
         `${YOUTUBE_API_BASE}/commentThreads?part=snippet&allThreadsRelatedToChannelId=${encodeURIComponent(
           account.externalAccountId
         )}&maxResults=8&order=time`,
-        { headers }
+        { headers, cache: "no-store" }
       );
       if (cmtRes.ok) {
         const cmtData = (await cmtRes.json()) as {
@@ -281,7 +281,8 @@ export async function fetchInstagramEngagement(
         igId
       )}?fields=id,username,name,followers_count,media_count,profile_picture_url&access_token=${encodeURIComponent(
         accessToken
-      )}`
+      )}`,
+      { cache: "no-store" }
     );
     if (!profileRes.ok) {
       const txt = await profileRes.text();
@@ -299,9 +300,10 @@ export async function fetchInstagramEngagement(
     const mediaRes = await fetchFn(
       `${graphBase}/${encodeURIComponent(
         igId
-      )}/media?fields=id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count&limit=10&access_token=${encodeURIComponent(
+      )}/media?fields=id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count&limit=25&access_token=${encodeURIComponent(
         accessToken
-      )}`
+      )}`,
+      { cache: "no-store" }
     );
 
     if (mediaRes.ok) {
@@ -350,7 +352,8 @@ export async function fetchInstagramEngagement(
               post.id
             )}/comments?fields=id,text,username,timestamp&limit=5&access_token=${encodeURIComponent(
               accessToken
-            )}`
+            )}`,
+            { cache: "no-store" }
           );
           if (cmtRes.ok) {
             const cmtData = (await cmtRes.json()) as {

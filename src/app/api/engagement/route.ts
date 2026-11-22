@@ -9,6 +9,8 @@ import {
 import { prisma } from "@/lib/prisma";
 import { ensureFreshAccessToken } from "@/worker/scheduler";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   const user = await getCurrentUser();
   if (!user) {
