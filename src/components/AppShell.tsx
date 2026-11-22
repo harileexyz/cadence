@@ -116,8 +116,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const isAuthPage = pathname === "/login" || pathname === "/register";
 
-  // Logged-out layout: clean public SaaS top bar + wide centered landing/auth canvas
-  if (!user || isAuthPage) {
+  // Dedicated clean centered layout for Sign In / Register (no marketing navbar or footer clutter)
+  if (isAuthPage) {
+    return (
+      <div className="flex min-h-screen flex-col justify-center bg-slate-50 px-4 py-8">
+        <main className="mx-auto w-full max-w-md">{children}</main>
+      </div>
+    );
+  }
+
+  // Logged-out layout: clean public SaaS top bar + wide centered landing canvas
+  if (!user) {
     return (
       <div className="flex min-h-screen flex-col">
         <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">

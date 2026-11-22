@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appName: "Cadence",
   webDir: "mobile-web",
   server: {
-    url: "https://cadences.in",
+    url: "https://cadences.in/login",
     cleartext: false,
     allowNavigation: [
       "cadences.in",

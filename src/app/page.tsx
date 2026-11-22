@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import {
   AlertCircle,
@@ -91,6 +92,7 @@ function StatusPill({ status }: { status: PostDTO["status"] }) {
 }
 
 export default function QueuePage() {
+  const router = useRouter();
   const [posts, setPosts] = useState<PostDTO[]>([]);
   const [loading, setLoading] = useState(true);
   const [isUnauthenticated, setIsUnauthenticated] = useState(false);
@@ -103,6 +105,16 @@ export default function QueuePage() {
     try {
       const res = await fetch("/api/posts");
       if (res.status === 401) {
+        const isNativeApp =
+          typeof window !== "undefined" &&
+          Boolean(
+            (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } })
+              .Capacitor?.isNativePlatform?.()
+          );
+        if (isNativeApp) {
+          router.replace("/login");
+          return;
+        }
         setIsUnauthenticated(true);
         return;
       }
@@ -114,7 +126,7 @@ export default function QueuePage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     void loadPosts();

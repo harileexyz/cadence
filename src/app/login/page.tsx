@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AlertCircle, Layers, Loader2 } from "lucide-react";
 
 export default function LoginPage() {
@@ -11,6 +11,17 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    void fetch("/api/user/me")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { user?: { id: string } | null } | null) => {
+        if (data?.user?.id) {
+          router.replace("/");
+        }
+      })
+      .catch(() => {});
+  }, [router]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
