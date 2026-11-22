@@ -10,53 +10,51 @@ import {
   Check,
   CheckCircle2,
   ChevronDown,
-  Code2,
   Film,
-  Instagram,
   MessageCircle,
   ShieldCheck,
-  Smartphone,
   Sparkles,
   X,
-  Youtube,
 } from "lucide-react";
+import {
+  PreviewAnalyticsDashboard,
+  PreviewCommentInbox,
+  PreviewComposeStudio,
+  PreviewCrossPlatformComparison,
+} from "@/components/LandingInteractivePreviews";
 
-const HERO_SCREENS = [
+const HERO_TABS = [
   {
-    id: "switcher",
+    id: "analytics",
     label: "1. Per-Platform & Account Stats",
     badge: "YouTube + Instagram Switcher",
+    url: "cadences.in/engagement?account=novatech",
     caption:
-      "Switch cleanly between All Platforms, YouTube (3), and Instagram (3) — or drill into any handle's momentum chart and top post.",
-    src: "/screenshots/platform-switcher.jpg",
-    url: "cadences.in/engagement?account=semicolon",
+      "Switch between All Platforms (6), YouTube (3), and Instagram (3) — or drill into any handle's momentum chart and top post.",
   },
   {
     id: "compare",
     label: "2. Shorts vs. Reels Comparison",
     badge: "Auto-Matched Cross-Posts",
+    url: "cadences.in/engagement#compare",
     caption:
-      "See how the exact same video performs on YouTube Shorts vs. Instagram Reels side-by-side with engagement split bars.",
-    src: "/screenshots/cross-platform-compare.jpg",
-    url: "cadences.in/engagement (Cross-Platform Comparison)",
+      "Compare how the exact same video performs on YouTube Shorts vs. Instagram Reels side-by-side with engagement split bars.",
+  },
+  {
+    id: "compose",
+    label: "3. Visual Reel Cover Scrubber",
+    badge: "Pre-Flight Spec Guardrails",
+    url: "cadences.in/compose",
+    caption:
+      "Scrub your uploaded MP4 frame-by-frame to lock your Instagram Reel cover or capture a custom YouTube thumbnail in 1 click.",
   },
   {
     id: "inbox",
-    label: "3. Unified Comment Reply Inbox",
+    label: "4. Unified Comment Reply Inbox",
     badge: "Live YT + IG Replies",
+    url: "cadences.in/engagement#inbox",
     caption:
-      "Read and reply to viewer comments across all 6 YouTube and Instagram channels from one screen with 1-click saved replies.",
-    src: "/screenshots/comment-reply-inbox.jpg",
-    url: "cadences.in/engagement (Unified Comment Inbox)",
-  },
-  {
-    id: "channel",
-    label: "4. Channel Drilldown & Player",
-    badge: "In-App Video Player",
-    caption:
-      "Watch your Shorts and Reels right inside Cadence while tracking real-time views, likes, comments, and engagement rate.",
-    src: "/screenshots/dashboard-hero.png",
-    url: "cadences.in/engagement?account=mythlantern",
+      "Read and reply live to viewer comments across all 6 YouTube and Instagram channels with 1-click Saved Reply chips.",
   },
 ] as const;
 
@@ -131,10 +129,10 @@ export function MarketingLanding({
   isLoggedIn?: boolean;
   onBackToDashboard?: () => void;
 }) {
-  const [activeScreenIdx, setActiveScreenIdx] = useState(0);
+  const [activeTabIdx, setActiveTabIdx] = useState(0);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
 
-  const activeScreen = HERO_SCREENS[activeScreenIdx];
+  const activeTab = HERO_TABS[activeTabIdx];
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -200,7 +198,7 @@ export function MarketingLanding({
           </div>
         )}
 
-        {/* 1. COMPACT HERO + INTERACTIVE LIVE APP SCREENSHOT SHOWCASE */}
+        {/* 1. HERO + RETINA-CRISP INTERACTIVE APP SHOWCASE (DUMMY CREATOR DATA) */}
         <section className="rounded-3xl border border-slate-200/90 bg-gradient-to-b from-indigo-50/70 via-white to-white px-4 pt-6 pb-8 shadow-xs sm:px-8 sm:pt-8 sm:pb-10">
           <div className="mx-auto max-w-4xl text-center">
             <div className="inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-white px-3.5 py-1 text-xs font-semibold text-indigo-700 shadow-2xs">
@@ -261,29 +259,29 @@ export function MarketingLanding({
             </div>
           </div>
 
-          {/* Interactive Screenshot Switcher Tabs */}
-          <div className="mx-auto mt-7 max-w-5xl">
+          {/* Interactive Screen Switcher Tabs */}
+          <div className="mx-auto mt-7 max-w-6xl">
             <div className="flex flex-wrap items-center justify-center gap-2">
-              {HERO_SCREENS.map((scr, idx) => {
-                const active = idx === activeScreenIdx;
+              {HERO_TABS.map((tab, idx) => {
+                const active = idx === activeTabIdx;
                 return (
                   <button
-                    key={scr.id}
+                    key={tab.id}
                     type="button"
-                    onClick={() => setActiveScreenIdx(idx)}
+                    onClick={() => setActiveTabIdx(idx)}
                     className={`rounded-xl border px-3.5 py-2 text-xs font-semibold transition ${
                       active
                         ? "border-slate-900 bg-slate-900 text-white shadow-xs"
                         : "border-slate-200 bg-white text-slate-700 hover:border-indigo-300 hover:bg-slate-50"
                     }`}
                   >
-                    {scr.label}
+                    {tab.label}
                   </button>
                 );
               })}
             </div>
 
-            {/* Browser Window Frame with Real App Screenshot */}
+            {/* Browser Window Frame with Vector-Sharp Live UI Preview */}
             <div className="mt-4 overflow-hidden rounded-2xl border border-slate-300 bg-slate-950 p-2 shadow-2xl sm:p-3">
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 px-3 py-2 text-xs text-slate-400">
                 <div className="flex items-center gap-1.5">
@@ -291,185 +289,124 @@ export function MarketingLanding({
                   <span className="h-2.5 w-2.5 rounded-full bg-amber-400" />
                   <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
                   <span className="ml-2 font-mono text-[11px] text-slate-300">
-                    https://{activeScreen.url}
+                    https://{activeTab.url}
                   </span>
                 </div>
                 <span className="rounded-full bg-indigo-500/20 px-2.5 py-0.5 text-[10px] font-semibold text-indigo-300">
-                  {activeScreen.badge}
+                  {activeTab.badge}
                 </span>
               </div>
 
-              <div className="overflow-hidden rounded-xl bg-white">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={activeScreen.src}
-                  alt={activeScreen.label}
-                  className="w-full object-cover"
-                />
+              <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+                {activeTab.id === "analytics" && <PreviewAnalyticsDashboard />}
+                {activeTab.id === "compare" && (
+                  <PreviewCrossPlatformComparison />
+                )}
+                {activeTab.id === "compose" && <PreviewComposeStudio />}
+                {activeTab.id === "inbox" && <PreviewCommentInbox />}
               </div>
 
               <p className="mt-2.5 px-2 text-center text-xs text-slate-300">
-                {activeScreen.caption}
+                {activeTab.caption}
               </p>
             </div>
           </div>
         </section>
 
-        {/* 2. VISUAL PRODUCT TOUR (REAL SCREENSHOTS + PUNCHY BULLETS) */}
-        <section id="features" className="space-y-12">
+        {/* 2. VISUAL PRODUCT TOUR (CRISP APP PREVIEWS + PUNCHY 3-BULLET HIGHLIGHTS) */}
+        <section id="features" className="space-y-10">
           <div className="mx-auto max-w-2xl text-center">
             <span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">
               See Cadence in Action
             </span>
             <h2 className="mt-2.5 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
-              Built for creators running multiple channels
+              Everything you need to run 6 channels without tab fatigue
             </h2>
           </div>
 
-          {/* Visual Row 1: Side-by-Side Shorts vs. Reels Comparison */}
-          <div className="grid items-center gap-8 rounded-3xl border border-slate-200 bg-white p-5 shadow-2xs sm:p-8 lg:grid-cols-12">
-            <div className="space-y-4 lg:col-span-5">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700">
-                <ArrowLeftRight className="h-3.5 w-3.5" />
-                <span>Cross-Platform Comparison</span>
-              </span>
-              <h3 className="text-xl font-extrabold text-slate-900 sm:text-2xl">
-                Compare the same video on YouTube Shorts vs. Instagram Reels
-              </h3>
-              <ul className="space-y-2.5 text-xs text-slate-600 sm:text-sm">
-                <li className="flex items-start gap-2">
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
-                  <span>
-                    <strong>Auto-matched pairs:</strong> Automatically links cross-posted Shorts and Reels by Cadence ID or caption keywords.
-                  </span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
-                  <span>
-                    <strong>Engagement split bar:</strong> Instantly see whether YouTube or Instagram drove more likes and comments.
-                  </span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
-                  <span>
-                    <strong>Watch inside Cadence:</strong> Click Watch on either card to play the Short or Reel without leaving your dashboard.
-                  </span>
-                </li>
-              </ul>
+          {/* Visual Highlight 1: Compose Studio & Cover Scrubber */}
+          <div className="space-y-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-2xs sm:p-7">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">
+                  <Film className="h-3.5 w-3.5" />
+                  <span>Visual Publishing Studio</span>
+                </span>
+                <h3 className="mt-2 text-xl font-extrabold text-slate-900 sm:text-2xl">
+                  Scrub your exact Reel cover frame & capture a YouTube thumbnail in 1 click
+                </h3>
+              </div>
+              <div className="flex flex-wrap gap-2 text-xs font-medium text-slate-600">
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1 text-emerald-700">
+                  <CheckCircle2 className="h-3.5 w-3.5" /> 9:16 Pre-Flight Guardrails
+                </span>
+                <span className="inline-flex items-center gap-1 rounded-full bg-purple-50 px-3 py-1 text-purple-700">
+                  <CheckCircle2 className="h-3.5 w-3.5" /> Per-Channel Presets
+                </span>
+              </div>
             </div>
 
-            <div className="overflow-hidden rounded-2xl border border-slate-200 shadow-lg lg:col-span-7">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/screenshots/cross-platform-compare.jpg"
-                alt="Cross-Platform YouTube Shorts vs Instagram Reels Comparison"
-                className="w-full object-cover"
-              />
+            <div className="overflow-hidden rounded-2xl border border-slate-200 shadow-md">
+              <PreviewComposeStudio />
             </div>
           </div>
 
-          {/* Visual Row 2: 1-Tap Platform Switcher & Per-Account Dashboards */}
-          <div className="grid items-center gap-8 rounded-3xl border border-slate-200 bg-white p-5 shadow-2xs sm:p-8 lg:grid-cols-12">
-            <div className="order-2 overflow-hidden rounded-2xl border border-slate-200 shadow-lg lg:order-1 lg:col-span-7">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/screenshots/platform-switcher.jpg"
-                alt="YouTube and Instagram Platform Switcher and Per-Account Analytics"
-                className="w-full object-cover"
-              />
+          {/* Visual Highlight 2: Cross-Platform Comparison */}
+          <div className="space-y-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-2xs sm:p-7">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700">
+                  <ArrowLeftRight className="h-3.5 w-3.5" />
+                  <span>Cross-Platform Analytics</span>
+                </span>
+                <h3 className="mt-2 text-xl font-extrabold text-slate-900 sm:text-2xl">
+                  Compare the same video on YouTube Shorts vs. Instagram Reels side-by-side
+                </h3>
+              </div>
+              <div className="flex flex-wrap gap-2 text-xs font-medium text-slate-600">
+                <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-3 py-1 text-rose-700">
+                  <CheckCircle2 className="h-3.5 w-3.5" /> Auto-Matched Cross-Posts
+                </span>
+                <span className="inline-flex items-center gap-1 rounded-full bg-fuchsia-50 px-3 py-1 text-fuchsia-700">
+                  <CheckCircle2 className="h-3.5 w-3.5" /> In-App Video Player
+                </span>
+              </div>
             </div>
 
-            <div className="order-1 space-y-4 lg:order-2 lg:col-span-5">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">
-                <BarChart3 className="h-3.5 w-3.5" />
-                <span>Per-Account Analytics</span>
-              </span>
-              <h3 className="text-xl font-extrabold text-slate-900 sm:text-2xl">
-                Switch between YouTube & Instagram or drill into any handle
-              </h3>
-              <ul className="space-y-2.5 text-xs text-slate-600 sm:text-sm">
-                <li className="flex items-start gap-2">
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
-                  <span>
-                    <strong>Clean platform toggle:</strong> Filter by All Platforms (6), YouTube (3), or Instagram (3) in one click.
-                  </span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
-                  <span>
-                    <strong>Momentum bar chart:</strong> Compare your last 12 uploads against your channel average benchmark line.
-                  </span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
-                  <span>
-                    <strong>Top Performing Post spotlight:</strong> Highlights your #1 recent upload with views, likes, comments & engagement rate.
-                  </span>
-                </li>
-              </ul>
+            <div className="overflow-hidden rounded-2xl border border-slate-200 shadow-md">
+              <PreviewCrossPlatformComparison />
             </div>
           </div>
 
-          {/* Visual Row 3: Unified Comment Reply Inbox + Mobile-First App & Presets */}
-          <div className="grid items-center gap-8 rounded-3xl border border-slate-200 bg-white p-5 shadow-2xs sm:p-8 lg:grid-cols-12">
-            <div className="space-y-4 lg:col-span-5">
-              <div className="flex flex-wrap gap-2">
+          {/* Visual Highlight 3: Unified Comment Reply Inbox */}
+          <div className="space-y-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-2xs sm:p-7">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800">
                   <MessageCircle className="h-3.5 w-3.5" />
-                  <span>Unified Comment Inbox</span>
+                  <span>Unified Engagement Inbox</span>
                 </span>
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-fuchsia-50 px-3 py-1 text-xs font-semibold text-fuchsia-700">
-                  <Smartphone className="h-3.5 w-3.5" />
-                  <span>Mobile & Desktop</span>
+                <h3 className="mt-2 text-xl font-extrabold text-slate-900 sm:text-2xl">
+                  Reply to YouTube and Instagram comments from one screen
+                </h3>
+              </div>
+              <div className="flex flex-wrap gap-2 text-xs font-medium text-slate-600">
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1 text-amber-800">
+                  <CheckCircle2 className="h-3.5 w-3.5" /> 1-Click Saved Reply Chips
+                </span>
+                <span className="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-3 py-1 text-indigo-700">
+                  <BarChart3 className="h-3.5 w-3.5" /> Filter by Platform or Handle
                 </span>
               </div>
-              <h3 className="text-xl font-extrabold text-slate-900 sm:text-2xl">
-                Reply to all comments, save channel presets & automate via API
-              </h3>
-              <ul className="space-y-2.5 text-xs text-slate-600 sm:text-sm">
-                <li className="flex items-start gap-2">
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
-                  <span>
-                    <strong>Live comment replies:</strong> Reply directly to YouTube & Instagram comments with 1-click Saved Reply chips.
-                  </span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
-                  <span>
-                    <strong>Per-channel Studio presets:</strong> Pre-save category, default tags, and AI/Altered disclosure per channel.
-                  </span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
-                  <span>
-                    <strong>Visual Cover Scrubber & Draft API:</strong> Scrub Reel covers visually or push MP4 drafts straight from local scripts (`POST /api/v1/drafts`).
-                  </span>
-                </li>
-              </ul>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-12 lg:col-span-7">
-              <div className="overflow-hidden rounded-2xl border border-slate-200 shadow-lg sm:col-span-8">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src="/screenshots/comment-reply-inbox.jpg"
-                  alt="Unified YouTube and Instagram Comment Reply Inbox"
-                  className="h-full w-full object-cover"
-                />
-              </div>
-              <div className="mx-auto max-w-[220px] overflow-hidden rounded-2xl border border-slate-200 shadow-lg sm:col-span-4">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src="/screenshots/mobile-channels.png"
-                  alt="Cadence Mobile App Channels and Presets"
-                  className="h-full w-full object-cover"
-                />
-              </div>
+            <div className="overflow-hidden rounded-2xl border border-slate-200 shadow-md">
+              <PreviewCommentInbox />
             </div>
           </div>
         </section>
 
-        {/* 3. CADENCE VS. BUFFER COMPARISON TABLE */}
+        {/* 3. CADENCE VS. TRADITIONAL SCHEDULERS TABLE */}
         <section id="compare" className="space-y-5">
           <div className="mx-auto max-w-2xl text-center">
             <span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">
