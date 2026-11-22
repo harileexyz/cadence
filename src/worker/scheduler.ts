@@ -241,6 +241,11 @@ export async function processTarget(
               buffer: Buffer.from(backup.fileData),
               contentType: asset.mimeType,
             });
+          } else {
+            throw new PlatformError(
+              `Uploaded video file (${asset.filename}) was cleared from temporary container disk during a server redeploy before database backup was enabled. Please create a new post and re-upload the video file.`,
+              { retryable: false, statusCode: 404 }
+            );
           }
         }
       }
