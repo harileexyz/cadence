@@ -53,6 +53,9 @@ export default function EngagementPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [selectedPlatform, setSelectedPlatform] = useState<
+    "ALL" | "YOUTUBE" | "INSTAGRAM"
+  >("ALL");
   const [selectedAccountId, setSelectedAccountId] = useState<string>("ALL");
   const [sortBy, setSortBy] = useState<SortMode>("latest");
   const [postQuery, setPostQuery] = useState("");
@@ -66,18 +69,38 @@ export default function EngagementPage() {
     if (acc) setSelectedAccountId(acc);
   }, []);
 
-  const selectAccount = useCallback((accountId: string) => {
-    setSelectedAccountId(accountId);
-    if (typeof window !== "undefined") {
-      const url = new URL(window.location.href);
-      if (accountId === "ALL") {
-        url.searchParams.delete("account");
-      } else {
-        url.searchParams.set("account", accountId);
+  const selectAccount = useCallback(
+    (accountId: string) => {
+      setSelectedAccountId(accountId);
+      if (accountId !== "ALL" && data) {
+        const found = data.channels.find((c) => c.accountId === accountId);
+        if (found) setSelectedPlatform(found.platform);
       }
-      window.history.replaceState({}, "", url.toString());
-    }
-  }, []);
+      if (typeof window !== "undefined") {
+        const url = new URL(window.location.href);
+        if (accountId === "ALL") {
+          url.searchParams.delete("account");
+        } else {
+          url.searchParams.set("account", accountId);
+        }
+        window.history.replaceState({}, "", url.toString());
+      }
+    },
+    [data]
+  );
+
+  const selectPlatform = useCallback(
+    (platform: "ALL" | "YOUTUBE" | "INSTAGRAM") => {
+      setSelectedPlatform(platform);
+      setSelectedAccountId("ALL");
+      if (typeof window !== "undefined") {
+        const url = new URL(window.location.href);
+        url.searchParams.delete("account");
+        window.history.replaceState({}, "", url.toString());
+      }
+    },
+    []
+  );
 
   const loadEngagement = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
@@ -94,6 +117,13 @@ export default function EngagementPage() {
       }
       const payload = (await res.json()) as EngagementResponse;
       setData(payload);
+      if (typeof window !== "undefined") {
+        const acc = new URLSearchParams(window.location.search).get("account");
+        if (acc) {
+          const found = payload.channels.find((c) => c.accountId === acc);
+          if (found) setSelectedPlatform(found.platform);
+        }
+      }
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Failed to load engagement stats"
@@ -108,32 +138,47 @@ export default function EngagementPage() {
     void loadEngagement(false);
   }, [loadEngagement]);
 
+  const platformChannels = useMemo(() => {
+    if (!data) return [];
+    return selectedPlatform === "ALL"
+      ? data.channels
+      : data.channels.filter((c) => c.platform === selectedPlatform);
+  }, [data, selectedPlatform]);
+
   // Ensure selectedAccountId still exists in loaded channels
   const activeChannel = useMemo(() => {
     if (!data || selectedAccountId === "ALL") return null;
     return (
-      data.channels.find((c) => c.accountId === selectedAccountId) ?? null
+      platformChannels.find((c) => c.accountId === selectedAccountId) ?? null
     );
-  }, [data, selectedAccountId]);
+  }, [data, platformChannels, selectedAccountId]);
 
   const effectiveAccountId = activeChannel ? activeChannel.accountId : "ALL";
 
   const channelStats = useMemo(() => {
     if (!data) return [];
-    return data.channels.map((ch) => computeChannelStats(ch, data.recentPosts));
-  }, [data]);
+    return platformChannels.map((ch) =>
+      computeChannelStats(ch, data.recentPosts)
+    );
+  }, [data, platformChannels]);
 
   const scopedChannels = useMemo(() => {
     if (!data) return [];
-    return activeChannel ? [activeChannel] : data.channels;
-  }, [data, activeChannel]);
+    return activeChannel ? [activeChannel] : platformChannels;
+  }, [data, activeChannel, platformChannels]);
 
   const scopedPosts = useMemo(() => {
     if (!data) return [];
-    return activeChannel
-      ? data.recentPosts.filter((p) => p.accountId === activeChannel.accountId)
-      : data.recentPosts;
-  }, [data, activeChannel]);
+    if (activeChannel) {
+      return data.recentPosts.filter(
+        (p) => p.accountId === activeChannel.accountId
+      );
+    }
+    if (selectedPlatform !== "ALL") {
+      return data.recentPosts.filter((p) => p.platform === selectedPlatform);
+    }
+    return data.recentPosts;
+  }, [data, activeChannel, selectedPlatform]);
 
   const scopedSummary = useMemo(
     () => computeScopedSummary(scopedChannels, scopedPosts),
@@ -174,12 +219,16 @@ export default function EngagementPage() {
 
   const filteredComments = useMemo(() => {
     if (!data) return [];
-    return activeChannel
-      ? data.recentComments.filter(
-          (c) => c.accountId === activeChannel.accountId
-        )
-      : data.recentComments;
-  }, [data, activeChannel]);
+    if (activeChannel) {
+      return data.recentComments.filter(
+        (c) => c.accountId === activeChannel.accountId
+      );
+    }
+    if (selectedPlatform !== "ALL") {
+      return data.recentComments.filter((c) => c.platform === selectedPlatform);
+    }
+    return data.recentComments;
+  }, [data, activeChannel, selectedPlatform]);
 
   const crossPostPairs = useMemo(() => {
     if (!data) return [];
@@ -262,112 +311,156 @@ export default function EngagementPage() {
         </div>
       ) : (
         <>
-          {/* Account Switcher Bar — Grouped by Platform with unmistakable YT / IG badges */}
-          <div className="space-y-2.5 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-2xs">
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={() => selectAccount("ALL")}
-                className={`inline-flex shrink-0 items-center gap-2 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition ${
-                  effectiveAccountId === "ALL"
-                    ? "border-slate-900 bg-slate-900 text-white shadow-xs"
-                    : "border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300 hover:bg-slate-100"
-                }`}
-              >
-                <Layers className="h-3.5 w-3.5" />
-                <span>All Channels</span>
-                <span
-                  className={`rounded-full px-1.5 py-0.5 text-[10px] ${
-                    effectiveAccountId === "ALL"
-                      ? "bg-white/20 text-white"
-                      : "bg-white text-slate-600"
-                  }`}
-                >
-                  {data.channels.length}
-                </span>
-              </button>
+          {/* Platform Switcher + Scoped Account Selector */}
+          <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-2xs">
+            {/* Step 1: Platform Switch (All | YouTube | Instagram) */}
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="inline-flex flex-wrap items-center gap-1 rounded-xl bg-slate-100 p-1">
+                {(
+                  [
+                    {
+                      id: "ALL",
+                      label: "All Platforms",
+                      count: data.channels.length,
+                    },
+                    {
+                      id: "YOUTUBE",
+                      label: "YouTube",
+                      count: data.channels.filter(
+                        (c) => c.platform === "YOUTUBE"
+                      ).length,
+                    },
+                    {
+                      id: "INSTAGRAM",
+                      label: "Instagram",
+                      count: data.channels.filter(
+                        (c) => c.platform === "INSTAGRAM"
+                      ).length,
+                    },
+                  ] as const
+                ).map((p) => {
+                  const isActive = selectedPlatform === p.id;
+                  const activeStyle =
+                    p.id === "YOUTUBE"
+                      ? "bg-red-600 text-white shadow-xs"
+                      : p.id === "INSTAGRAM"
+                        ? "bg-gradient-to-r from-fuchsia-600 to-pink-600 text-white shadow-xs"
+                        : "bg-slate-900 text-white shadow-xs";
 
-              {(["YOUTUBE", "INSTAGRAM"] as const).map((platform) => {
-                const group = data.channels.filter(
-                  (c) => c.platform === platform
-                );
-                if (group.length === 0) return null;
-                const isYt = platform === "YOUTUBE";
-
-                return (
-                  <div
-                    key={platform}
-                    className="flex flex-wrap items-center gap-1.5"
-                  >
-                    <span className="hidden h-5 w-px bg-slate-200 sm:inline-block" />
-                    <span
-                      className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-bold uppercase tracking-wide ${
-                        isYt
-                          ? "bg-red-50 text-red-700"
-                          : "bg-fuchsia-50 text-fuchsia-700"
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => selectPlatform(p.id)}
+                      className={`inline-flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-semibold transition ${
+                        isActive
+                          ? activeStyle
+                          : "text-slate-600 hover:bg-white/70 hover:text-slate-900"
                       }`}
                     >
-                      {isYt ? (
-                        <Youtube className="h-3 w-3" />
-                      ) : (
-                        <Instagram className="h-3 w-3" />
-                      )}
-                      <span>{isYt ? "YouTube" : "Instagram"}</span>
-                    </span>
-
-                    {group.map((ch) => {
-                      const isSelected = effectiveAccountId === ch.accountId;
-                      return (
-                        <button
-                          key={ch.accountId}
-                          type="button"
-                          onClick={() => selectAccount(ch.accountId)}
-                          className={`inline-flex shrink-0 items-center gap-2 rounded-full border py-1 pr-3 pl-1.5 text-xs font-semibold transition ${
-                            isSelected
-                              ? isYt
-                                ? "border-red-600 bg-red-600 text-white shadow-xs"
-                                : "border-fuchsia-600 bg-gradient-to-r from-fuchsia-600 to-pink-600 text-white shadow-xs"
-                              : isYt
-                                ? "border-red-200/80 bg-red-50/40 text-slate-800 hover:border-red-300 hover:bg-red-50"
-                                : "border-fuchsia-200/80 bg-fuchsia-50/40 text-slate-800 hover:border-fuchsia-300 hover:bg-fuchsia-50"
+                      {p.id === "ALL" && <Layers className="h-3.5 w-3.5" />}
+                      {p.id === "YOUTUBE" && (
+                        <Youtube
+                          className={`h-3.5 w-3.5 ${
+                            isActive ? "text-white" : "text-red-600"
                           }`}
-                        >
-                          {ch.avatarUrl ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              src={ch.avatarUrl}
-                              alt={ch.displayName}
-                              referrerPolicy="no-referrer"
-                              className="h-5 w-5 shrink-0 rounded-full object-cover ring-1 ring-white/80"
-                            />
-                          ) : (
-                            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-200 text-[10px] font-bold text-slate-700">
-                              {ch.displayName.charAt(0).toUpperCase()}
-                            </span>
-                          )}
-                          <span className="max-w-[130px] truncate">
-                            {ch.displayName}
-                          </span>
-                          {isYt ? (
-                            <Youtube
-                              className={`h-3.5 w-3.5 shrink-0 ${
-                                isSelected ? "text-white/90" : "text-red-600"
-                              }`}
-                            />
-                          ) : (
-                            <Instagram
-                              className={`h-3.5 w-3.5 shrink-0 ${
-                                isSelected ? "text-white/90" : "text-fuchsia-600"
-                              }`}
-                            />
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                );
-              })}
+                        />
+                      )}
+                      {p.id === "INSTAGRAM" && (
+                        <Instagram
+                          className={`h-3.5 w-3.5 ${
+                            isActive ? "text-white" : "text-fuchsia-600"
+                          }`}
+                        />
+                      )}
+                      <span>{p.label}</span>
+                      <span
+                        className={`rounded-full px-1.5 py-0.5 text-[10px] ${
+                          isActive
+                            ? "bg-white/20 text-white"
+                            : "bg-white text-slate-500"
+                        }`}
+                      >
+                        {p.count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {selectedPlatform === "ALL" && (
+                <p className="text-[11px] text-slate-400">
+                  Switch to <strong className="text-slate-600">YouTube</strong> or{" "}
+                  <strong className="text-slate-600">Instagram</strong> to pick individual accounts
+                </p>
+              )}
             </div>
+
+            {/* Step 2: Account Pills (ONLY for the chosen platform!) */}
+            {selectedPlatform !== "ALL" && platformChannels.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
+                <button
+                  type="button"
+                  onClick={() => selectAccount("ALL")}
+                  className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                    effectiveAccountId === "ALL"
+                      ? selectedPlatform === "YOUTUBE"
+                        ? "border-red-600 bg-red-600 text-white shadow-xs"
+                        : "border-fuchsia-600 bg-gradient-to-r from-fuchsia-600 to-pink-600 text-white shadow-xs"
+                      : "border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
+                  }`}
+                >
+                  <span>
+                    All {selectedPlatform === "YOUTUBE" ? "YouTube" : "Instagram"}
+                  </span>
+                  <span
+                    className={`rounded-full px-1.5 py-0.5 text-[10px] ${
+                      effectiveAccountId === "ALL"
+                        ? "bg-white/20 text-white"
+                        : "bg-white text-slate-600"
+                    }`}
+                  >
+                    {platformChannels.length}
+                  </span>
+                </button>
+
+                {platformChannels.map((ch) => {
+                  const isSelected = effectiveAccountId === ch.accountId;
+                  const isYt = ch.platform === "YOUTUBE";
+                  return (
+                    <button
+                      key={ch.accountId}
+                      type="button"
+                      onClick={() => selectAccount(ch.accountId)}
+                      className={`inline-flex shrink-0 items-center gap-2 rounded-full border py-1 pr-3 pl-1.5 text-xs font-semibold transition ${
+                        isSelected
+                          ? isYt
+                            ? "border-red-600 bg-red-600 text-white shadow-xs"
+                            : "border-fuchsia-600 bg-gradient-to-r from-fuchsia-600 to-pink-600 text-white shadow-xs"
+                          : "border-slate-200 bg-white text-slate-800 hover:border-slate-300 hover:bg-slate-50"
+                      }`}
+                    >
+                      {ch.avatarUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={ch.avatarUrl}
+                          alt={ch.displayName}
+                          referrerPolicy="no-referrer"
+                          className="h-5 w-5 shrink-0 rounded-full object-cover ring-1 ring-white/80"
+                        />
+                      ) : (
+                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-200 text-[10px] font-bold text-slate-700">
+                          {ch.displayName.charAt(0).toUpperCase()}
+                        </span>
+                      )}
+                      <span className="max-w-[160px] truncate">
+                        {ch.displayName}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Dedicated Single-Account Header Banner */}
@@ -529,7 +622,13 @@ export default function EngagementPage() {
               <PostsPerformanceChart
                 posts={scopedPosts}
                 scopeLabel={
-                  activeChannel ? activeChannel.displayName : "All Channels"
+                  activeChannel
+                    ? activeChannel.displayName
+                    : selectedPlatform === "YOUTUBE"
+                      ? "All YouTube"
+                      : selectedPlatform === "INSTAGRAM"
+                        ? "All Instagram"
+                        : "All Platforms"
                 }
               />
             </div>
@@ -788,8 +887,8 @@ export default function EngagementPage() {
             </section>
           )}
 
-          {/* Cross-Platform Side-by-Side Post Comparison (All Channels Overview) */}
-          {!activeChannel && (
+          {/* Cross-Platform Side-by-Side Post Comparison (All Platforms Overview) */}
+          {selectedPlatform === "ALL" && !activeChannel && (
             <CrossPlatformComparison
               pairs={crossPostPairs}
               onPreviewPost={(p) => setPreviewPost(p)}
