@@ -250,7 +250,7 @@ export default function EngagementPage() {
   }, [data, activeChannel]);
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 space-y-4 overflow-x-hidden sm:space-y-6">
       {/* Top Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -329,7 +329,7 @@ export default function EngagementPage() {
           <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-2xs">
             {/* Step 1: Platform Switch (All | YouTube | Instagram) */}
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="inline-flex flex-wrap items-center gap-1 rounded-xl bg-slate-100 p-1">
+              <div className="no-scrollbar flex w-full max-w-full items-center gap-1 overflow-x-auto rounded-xl bg-slate-100 p-1 sm:w-auto">
                 {(
                   [
                     {
@@ -911,9 +911,9 @@ export default function EngagementPage() {
           )}
 
           {/* Bottom 2-Column Content: Posts Performance + Recent Comments Inbox */}
-          <div className="grid gap-6 lg:grid-cols-3">
+          <div className="grid min-w-0 gap-6 lg:grid-cols-3">
             {/* Posts Performance (2 cols) */}
-            <section className="space-y-3 lg:col-span-2">
+            <section className="min-w-0 space-y-3 lg:col-span-2">
               <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-2">
                   <Sparkles className="h-4 w-4 text-indigo-600" />

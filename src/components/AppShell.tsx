@@ -446,7 +446,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Main Column (shifted right by w-60 on desktop) */}
-      <div className="flex min-h-screen flex-1 flex-col md:pl-60">
+      <div className="flex min-h-screen min-w-0 flex-1 flex-col overflow-x-hidden md:pl-60">
         {/* Compact Mobile Top Header (md:hidden) */}
         <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-slate-200 bg-white/95 px-4 backdrop-blur md:hidden">
           <Link
@@ -489,7 +489,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <main className="mx-auto w-full max-w-[1720px] flex-1 px-3 py-5 pb-24 sm:px-5 md:px-6 md:py-6 md:pb-8 lg:px-8">
+        <main className="mx-auto w-full min-w-0 max-w-[1720px] flex-1 px-3 py-4 pb-24 sm:px-5 md:px-6 md:py-6 md:pb-8 lg:px-8">
           {banner?.enabled && banner.message && (
             <div
               className={`mb-5 rounded-xl border px-4 py-2.5 text-xs font-medium ${

@@ -105,7 +105,7 @@ export function UnifiedCommentInbox({
   }
 
   return (
-    <section className="space-y-3">
+    <section className="min-w-0 space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <MessageCircle className="h-4 w-4 text-amber-500" />

@@ -140,7 +140,7 @@ export function PostsPerformanceChart({
       : formatCompactNumber(Math.round(val));
 
   return (
-    <div className="flex h-full flex-col justify-between rounded-2xl border border-slate-200 bg-white p-5 shadow-2xs">
+    <div className="flex h-full min-w-0 flex-col justify-between overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs sm:p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">

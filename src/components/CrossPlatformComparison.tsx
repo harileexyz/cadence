@@ -93,13 +93,13 @@ export function CrossPlatformComparison({
         )}
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid min-w-0 gap-4 md:grid-cols-2">
         {visiblePairs.map((pair) => {
           const igShare = 100 - pair.ytEngagementShare;
           return (
             <div
               key={pair.id}
-              className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs"
+              className="flex min-w-0 flex-col justify-between overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs"
             >
               {/* Header: Thumbnail + Shared Title */}
               <div className="flex items-start gap-3">
