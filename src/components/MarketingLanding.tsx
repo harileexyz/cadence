@@ -201,8 +201,8 @@ export function MarketingLanding({
         )}
 
         {/* 1. HERO + RETINA-CRISP INTERACTIVE APP SHOWCASE (DUMMY CREATOR DATA) */}
-        <section className="rounded-3xl border border-slate-200/90 bg-gradient-to-b from-indigo-50/70 via-white to-white px-4 pt-6 pb-8 shadow-xs sm:px-8 sm:pt-8 sm:pb-10">
-          <div className="mx-auto max-w-4xl text-center">
+        <section className="rounded-3xl border border-slate-200/90 bg-gradient-to-b from-indigo-50/70 via-white to-white px-4 pt-6 pb-8 shadow-xs sm:px-6 sm:pt-8 sm:pb-10 lg:px-8">
+          <div className="mx-auto max-w-5xl text-center">
             <div className="inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-white px-3.5 py-1 text-xs font-semibold text-indigo-700 shadow-2xs">
               <Sparkles className="h-3.5 w-3.5 text-indigo-600" />
               <span>6 Channels Free Forever — 2× the Standard 3-Channel Limit</span>
@@ -220,7 +220,7 @@ export function MarketingLanding({
               in one click.
             </h1>
 
-            <p className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-slate-600 sm:text-base">
+            <p className="mx-auto mt-3 max-w-3xl text-sm leading-relaxed text-slate-600 sm:text-base">
               Upload once, scrub your Reel cover frame visually, compare Shorts vs. Reels side-by-side, and reply to all comments from one studio.
             </p>
 
@@ -270,8 +270,8 @@ export function MarketingLanding({
             </div>
           </div>
 
-          {/* Interactive Screen Switcher Tabs */}
-          <div className="mx-auto mt-7 max-w-6xl">
+          {/* Interactive Screen Switcher Tabs — Full Hero Canvas Width */}
+          <div className="mt-7 w-full">
             <div className="flex flex-wrap items-center justify-center gap-2">
               {HERO_TABS.map((tab, idx) => {
                 const active = idx === activeTabIdx;
@@ -482,7 +482,7 @@ export function MarketingLanding({
             </p>
           </div>
 
-          <div className="mx-auto grid max-w-4xl gap-5 md:grid-cols-2">
+          <div className="mx-auto grid max-w-6xl gap-6 md:grid-cols-2">
             <div className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-6 shadow-2xs">
               <div>
                 <div className="flex items-center justify-between">
@@ -567,7 +567,7 @@ export function MarketingLanding({
         </section>
 
         {/* 5. COMPACT FAQ */}
-        <section className="mx-auto max-w-3xl space-y-3">
+        <section className="mx-auto max-w-5xl space-y-3">
           <h2 className="text-center text-xl font-extrabold tracking-tight text-slate-900 sm:text-2xl">
             Frequently Asked Questions
           </h2>
