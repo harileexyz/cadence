@@ -50,7 +50,7 @@ const FEATURES: FeatureDoc[] = [
     id: "connect-channels",
     category: "START",
     title: "Connect up to 6 Channels Free (YouTube + Instagram)",
-    badge: "2× Buffer Free",
+    badge: "6 Free Channels",
     summary:
       "Connect YouTube channels and Instagram Creator/Business accounts in one workspace with encrypted AES-256-GCM token storage.",
     howTo: [
@@ -224,7 +224,7 @@ const FEATURES: FeatureDoc[] = [
 const FAQS = [
   {
     q: "Why does Instagram require a Creator/Business account linked to a Facebook Page?",
-    a: "Meta's official Instagram Publishing API (used by Buffer, Hootsuite, and Cadence) only allows third-party schedulers to publish Reels/Posts and manage comments for Instagram Professional (Creator or Business) accounts linked to a Facebook Page. Personal Instagram accounts cannot publish via API.",
+    a: "Meta's official Instagram Publishing API only allows third-party schedulers to publish Reels/Posts and manage comments for Instagram Professional (Creator or Business) accounts linked to a Facebook Page. Personal Instagram accounts cannot publish via API.",
   },
   {
     q: "How do I make sure my YouTube upload publishes as a YouTube Short?",

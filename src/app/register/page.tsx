@@ -62,7 +62,7 @@ export default function RegisterPage() {
             Start Free on Cadence
           </h1>
           <p className="mt-1 text-sm text-slate-600">
-            Connect up to 6 social channels free — 2× Buffer&apos;s 3-channel limit.
+            Connect up to 6 social channels free — double the standard 3-channel limit.
           </p>
         </div>
 

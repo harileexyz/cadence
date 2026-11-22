@@ -58,7 +58,7 @@ export default function PricingPage() {
       <div className="text-center">
         <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">
           <Sparkles className="h-3.5 w-3.5" />
-          <span>2× More Free Channels Than Buffer</span>
+          <span>6 Free Connected Channels Forever</span>
         </span>
         <h1 className="mt-3 text-3xl font-bold tracking-tight text-slate-900">
           Simple, Creator-Friendly Pricing

@@ -318,7 +318,7 @@ function AccountsContent() {
 
             <div className="mt-5 space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs text-slate-700">
               <p className="font-semibold text-slate-900">
-                Before you continue (required by Instagram&apos;s API for all schedulers like Buffer & Cadence):
+                Before you continue (required by Meta&apos;s official Instagram Publishing API):
               </p>
               <ol className="list-decimal space-y-2 pl-4">
                 <li>

@@ -205,7 +205,7 @@ export function MarketingLanding({
           <div className="mx-auto max-w-4xl text-center">
             <div className="inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-white px-3.5 py-1 text-xs font-semibold text-indigo-700 shadow-2xs">
               <Sparkles className="h-3.5 w-3.5 text-indigo-600" />
-              <span>6 Channels Free Forever — 2× Buffer&apos;s 3-Channel Limit</span>
+              <span>6 Channels Free Forever — 2× the Standard 3-Channel Limit</span>
             </div>
 
             <h1 className="mt-4 text-3xl font-extrabold tracking-tight text-slate-900 sm:text-5xl">
@@ -476,7 +476,7 @@ export function MarketingLanding({
               Why Creators Switch
             </span>
             <h2 className="mt-2.5 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
-              Cadence vs. Buffer & Traditional Schedulers
+              Cadence vs. Traditional Social Schedulers
             </h2>
           </div>
 
@@ -490,7 +490,7 @@ export function MarketingLanding({
                       Cadence (cadences.in)
                     </th>
                     <th className="px-4 py-3 font-semibold text-slate-500 sm:px-6">
-                      Buffer / Traditional Schedulers
+                      Traditional Social Schedulers
                     </th>
                   </tr>
                 </thead>
@@ -542,7 +542,7 @@ export function MarketingLanding({
                     Generous Free
                   </h3>
                   <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
-                    2× Buffer Free
+                    6 Channels Free
                   </span>
                 </div>
                 <p className="mt-2 flex items-baseline gap-1">

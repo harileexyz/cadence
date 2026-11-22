@@ -65,7 +65,7 @@ export default function OpenGraphImage() {
               fontWeight: 700,
             }}
           >
-            6 Channels Free Forever · 2× Buffer
+            6 Channels Free Forever · Multi-Brand Studio
           </div>
         </div>
 

@@ -12,7 +12,7 @@ export const metadata: Metadata = {
     template: "%s | Cadence",
   },
   description:
-    "Connect up to 6 YouTube and Instagram channels free (2× Buffer's free limit). Upload once, scrub Reel cover frames visually, customize per-channel Studio settings, compare Shorts vs. Reels analytics side-by-side, reply to comments in one inbox, and automate drafts via REST API.",
+    "Connect up to 6 YouTube and Instagram channels free forever. Upload once, scrub Reel cover frames visually, customize per-channel Studio settings, compare Shorts vs. Reels analytics side-by-side, reply to comments in one inbox, and automate drafts via REST API.",
   applicationName: "Cadence",
   keywords: [
     "Cadence",
@@ -20,7 +20,6 @@ export const metadata: Metadata = {
     "social media scheduler",
     "YouTube Shorts scheduler",
     "Instagram Reels scheduler",
-    "Buffer alternative",
     "cross-post YouTube Shorts and Instagram Reels",
     "multi-channel social publisher",
     "free social media scheduler 6 channels",
@@ -42,7 +41,7 @@ export const metadata: Metadata = {
     title:
       "Cadence — Cross-Post YouTube Shorts & Instagram Reels in One Click",
     description:
-      "Connect 6 YouTube & Instagram channels free forever (2× Buffer). Visual Reel cover scrubber, per-channel Studio presets, side-by-side Shorts vs. Reels comparison, unified comment reply inbox & Draft REST API.",
+      "Connect 6 YouTube & Instagram channels free forever. Visual Reel cover scrubber, per-channel Studio presets, side-by-side Shorts vs. Reels comparison, unified comment reply inbox & Draft REST API.",
   },
   twitter: {
     card: "summary_large_image",

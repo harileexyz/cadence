@@ -19,7 +19,7 @@ export const PLAN_SPECS: Record<PlanTier, PlanSpec> = {
     maxPostsPerMonth: 30,
     maxFileSizeMb: 100,
     features: [
-      "Up to 6 connected channels (2× Buffer's free limit)",
+      "Up to 6 connected channels (double the standard 3-channel free limit)",
       "30 scheduled or immediate cross-posts / month",
       "Full YouTube Studio & Instagram Reels settings",
       "Per-channel defaults & overrides",
