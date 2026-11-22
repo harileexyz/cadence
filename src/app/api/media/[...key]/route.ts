@@ -10,41 +10,54 @@ const SECURITY_HEADERS = {
     "default-src 'none'; media-src 'self'; img-src 'self'; style-src 'unsafe-inline'",
 };
 
-async function resolveMediaBuffer(storageKey: string): Promise<{
-  buffer: Buffer;
+async function ensureMediaOnStorage(storageKey: string): Promise<{
   mimeType: string;
+  sizeBytes: number;
 } | null> {
-  const asset = await prisma.mediaAsset.findUnique({
+  // 1. Query metadata only (never pull the multi-MB fileData bytea column unless file is missing)
+  const meta = await prisma.mediaAsset.findUnique({
     where: { storageKey },
     select: {
+      id: true,
       mimeType: true,
       sizeBytes: true,
-      fileData: true,
     },
   });
 
-  if (!asset) return null;
+  if (!meta) return null;
 
   const storage = getStorageProvider();
+  const existsOnDisk = storage.has
+    ? await storage.has(storageKey)
+    : false;
 
-  try {
-    const diskBuf = await storage.getBuffer(storageKey);
-    return { buffer: diskBuf, mimeType: asset.mimeType };
-  } catch {
-    // Fallback to Postgres bytea backup if container disk was wiped by a Render redeploy
-    if (asset.fileData && asset.fileData.byteLength > 0) {
-      const restored = Buffer.from(asset.fileData);
-      await storage
-        .upload({
-          key: storageKey,
-          buffer: restored,
-          contentType: asset.mimeType,
-        })
-        .catch(() => {});
-      return { buffer: restored, mimeType: asset.mimeType };
+  if (!existsOnDisk) {
+    // Only pull fileData backup from Postgres when the local file was wiped by a container redeploy
+    const backup = await prisma.mediaAsset.findUnique({
+      where: { id: meta.id },
+      select: { fileData: true },
+    });
+    if (!backup?.fileData || backup.fileData.byteLength === 0) {
+      return null;
     }
-    return null;
+    const restored = Buffer.from(backup.fileData);
+    await storage
+      .upload({
+        key: storageKey,
+        buffer: restored,
+        contentType: meta.mimeType,
+      })
+      .catch(() => {});
+    return {
+      mimeType: meta.mimeType,
+      sizeBytes: restored.byteLength,
+    };
   }
+
+  return {
+    mimeType: meta.mimeType,
+    sizeBytes: meta.sizeBytes,
+  };
 }
 
 function decodeSegments(segments: string[]): string {
@@ -58,8 +71,8 @@ export async function HEAD(
   const { key } = await context.params;
   const decodedKey = decodeSegments(key);
 
-  const resolved = await resolveMediaBuffer(decodedKey);
-  if (!resolved) {
+  const meta = await ensureMediaOnStorage(decodedKey);
+  if (!meta) {
     return new NextResponse(null, { status: 404 });
   }
 
@@ -67,8 +80,8 @@ export async function HEAD(
     status: 200,
     headers: {
       ...SECURITY_HEADERS,
-      "Content-Type": resolved.mimeType,
-      "Content-Length": String(resolved.buffer.byteLength),
+      "Content-Type": meta.mimeType,
+      "Content-Length": String(meta.sizeBytes),
     },
   });
 }
@@ -80,44 +93,72 @@ export async function GET(
   const { key } = await context.params;
   const decodedKey = decodeSegments(key);
 
-  const resolved = await resolveMediaBuffer(decodedKey);
-  if (!resolved) {
+  const meta = await ensureMediaOnStorage(decodedKey);
+  if (!meta) {
     return NextResponse.json({ error: "Media file not found" }, { status: 404 });
   }
 
-  const { buffer, mimeType } = resolved;
-  const totalSize = buffer.byteLength;
+  const storage = getStorageProvider();
   const rangeHeader = request.headers.get("range");
 
   if (rangeHeader) {
     const match = rangeHeader.match(/bytes=(\d*)-(\d*)/i);
     if (match) {
+      const totalSize = meta.sizeBytes;
       const start = match[1] ? Number.parseInt(match[1], 10) : 0;
       const end = match[2]
         ? Math.min(Number.parseInt(match[2], 10), totalSize - 1)
         : totalSize - 1;
 
       if (start >= 0 && start < totalSize && start <= end) {
-        const chunk = buffer.subarray(start, end + 1);
+        if (storage.getRange) {
+          const { buffer: chunk, totalSize: actualTotal } =
+            await storage.getRange(decodedKey, start, end);
+          return new NextResponse(new Uint8Array(chunk), {
+            status: 206,
+            headers: {
+              ...SECURITY_HEADERS,
+              "Content-Type": meta.mimeType,
+              "Content-Length": String(chunk.byteLength),
+              "Content-Range": `bytes ${start}-${start + chunk.byteLength - 1}/${actualTotal}`,
+            },
+          });
+        }
+
+        const fullBuf = await storage.getBuffer(decodedKey);
+        const chunk = fullBuf.subarray(start, end + 1);
         return new NextResponse(new Uint8Array(chunk), {
           status: 206,
           headers: {
             ...SECURITY_HEADERS,
-            "Content-Type": mimeType,
+            "Content-Type": meta.mimeType,
             "Content-Length": String(chunk.byteLength),
-            "Content-Range": `bytes ${start}-${end}/${totalSize}`,
+            "Content-Range": `bytes ${start}-${end}/${fullBuf.byteLength}`,
           },
         });
       }
     }
   }
 
-  return new NextResponse(new Uint8Array(buffer), {
-    status: 200,
-    headers: {
-      ...SECURITY_HEADERS,
-      "Content-Type": mimeType,
-      "Content-Length": String(totalSize),
-    },
-  });
+  try {
+    const { stream, sizeBytes } = await storage.getReadableStream(decodedKey);
+    return new NextResponse(stream, {
+      status: 200,
+      headers: {
+        ...SECURITY_HEADERS,
+        "Content-Type": meta.mimeType,
+        "Content-Length": String(sizeBytes ?? meta.sizeBytes),
+      },
+    });
+  } catch {
+    const buffer = await storage.getBuffer(decodedKey);
+    return new NextResponse(new Uint8Array(buffer), {
+      status: 200,
+      headers: {
+        ...SECURITY_HEADERS,
+        "Content-Type": meta.mimeType,
+        "Content-Length": String(buffer.byteLength),
+      },
+    });
+  }
 }

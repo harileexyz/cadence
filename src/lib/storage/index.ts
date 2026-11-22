@@ -10,7 +10,13 @@ export interface StorageProvider {
     contentType: string;
   }): Promise<{ key: string; publicUrl: string }>;
   getPublicUrl(key: string): string;
+  has?(key: string): Promise<boolean>;
   getBuffer(key: string): Promise<Buffer>;
+  getRange?(
+    key: string,
+    start: number,
+    end: number
+  ): Promise<{ buffer: Buffer; totalSize: number }>;
   getReadableStream(key: string): Promise<{
     stream: ReadableStream<Uint8Array>;
     sizeBytes?: number;

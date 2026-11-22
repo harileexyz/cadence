@@ -123,9 +123,25 @@ export async function POST(request: Request) {
     data.mediaAssetIds.length > 0
       ? await prisma.mediaAsset.findMany({
           where: { id: { in: data.mediaAssetIds }, userId: user.id },
+          select: {
+            id: true,
+            userId: true,
+            filename: true,
+            mimeType: true,
+            sizeBytes: true,
+            width: true,
+            height: true,
+            durationSec: true,
+            storageKey: true,
+            publicUrl: true,
+            storageDeleted: true,
+            createdAt: true,
+          },
         })
       : [];
-  const mediaById = new Map(mediaAssets.map((m) => [m.id, m]));
+  const mediaById = new Map(
+    mediaAssets.map((m) => [m.id, { ...m, fileData: null }])
+  );
   const orderedMedia = data.mediaAssetIds
     .map((id) => mediaById.get(id))
     .filter((m): m is NonNullable<typeof m> => Boolean(m));

@@ -170,7 +170,24 @@ export async function processTarget(
       post: {
         include: {
           media: {
-            include: { mediaAsset: true },
+            include: {
+              mediaAsset: {
+                select: {
+                  id: true,
+                  userId: true,
+                  filename: true,
+                  mimeType: true,
+                  sizeBytes: true,
+                  width: true,
+                  height: true,
+                  durationSec: true,
+                  storageKey: true,
+                  publicUrl: true,
+                  storageDeleted: true,
+                  createdAt: true,
+                },
+              },
+            },
             orderBy: { orderIndex: "asc" },
           },
         },
@@ -197,20 +214,31 @@ export async function processTarget(
     );
 
     const adapter = adapterLookup(target.account.platform);
-    const mediaAssets = target.post.media.map((m) => m.mediaAsset);
+    const mediaAssets = target.post.media.map((m) => ({
+      ...m.mediaAsset,
+      fileData: null,
+    }));
 
     // If using local storage, restore any missing files from Postgres fileData backup
-    // (survives Render container redeploys) and refresh publicUrl to current APP_URL.
+    // only when the file is actually missing on disk (avoids loading bytea into RAM).
     if (storageProvider.kind === "local") {
       for (const asset of mediaAssets) {
         asset.publicUrl = storageProvider.getPublicUrl(asset.storageKey);
-        try {
-          await storageProvider.getBuffer(asset.storageKey);
-        } catch {
-          if (asset.fileData && asset.fileData.byteLength > 0) {
+        const existsOnDisk = storageProvider.has
+          ? await storageProvider.has(asset.storageKey)
+          : await storageProvider
+              .getBuffer(asset.storageKey)
+              .then(() => true)
+              .catch(() => false);
+        if (!existsOnDisk && prismaClient.mediaAsset?.findUnique) {
+          const backup = await prismaClient.mediaAsset.findUnique({
+            where: { id: asset.id },
+            select: { fileData: true },
+          });
+          if (backup?.fileData && backup.fileData.byteLength > 0) {
             await storageProvider.upload({
               key: asset.storageKey,
-              buffer: Buffer.from(asset.fileData),
+              buffer: Buffer.from(backup.fileData),
               contentType: asset.mimeType,
             });
           }
@@ -225,8 +253,26 @@ export async function processTarget(
       target,
       media: mediaAssets,
       storage: storageProvider,
-      getMediaAssetById: (id: string) =>
-        prismaClient.mediaAsset.findUnique({ where: { id } }),
+      getMediaAssetById: async (id: string) => {
+        const found = await prismaClient.mediaAsset.findUnique({
+          where: { id },
+          select: {
+            id: true,
+            userId: true,
+            filename: true,
+            mimeType: true,
+            sizeBytes: true,
+            width: true,
+            height: true,
+            durationSec: true,
+            storageKey: true,
+            publicUrl: true,
+            storageDeleted: true,
+            createdAt: true,
+          },
+        });
+        return found ? { ...found, fileData: null } : null;
+      },
     });
 
     await prismaClient.postTarget.update({
@@ -413,6 +459,10 @@ export async function cleanupPublishedMediaAssets(
           },
         },
       },
+    },
+    select: {
+      id: true,
+      storageKey: true,
     },
     take: 25,
   });

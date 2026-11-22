@@ -51,9 +51,43 @@ export class LocalStorageProvider implements StorageProvider {
     };
   }
 
+  async has(key: string): Promise<boolean> {
+    try {
+      const targetPath = this.resolvePath(key);
+      const stat = await fs.stat(targetPath);
+      return stat.isFile() && stat.size > 0;
+    } catch {
+      return false;
+    }
+  }
+
   async getBuffer(key: string): Promise<Buffer> {
     const targetPath = this.resolvePath(key);
     return fs.readFile(targetPath);
+  }
+
+  async getRange(
+    key: string,
+    start: number,
+    end: number
+  ): Promise<{ buffer: Buffer; totalSize: number }> {
+    const targetPath = this.resolvePath(key);
+    const stat = await fs.stat(targetPath);
+    const totalSize = stat.size;
+    const safeStart = Math.max(0, Math.min(start, totalSize - 1));
+    const safeEnd = Math.max(safeStart, Math.min(end, totalSize - 1));
+    const length = safeEnd - safeStart + 1;
+    const handle = await fs.open(targetPath, "r");
+    try {
+      const buf = Buffer.allocUnsafe(length);
+      const { bytesRead } = await handle.read(buf, 0, length, safeStart);
+      return {
+        buffer: bytesRead === length ? buf : buf.subarray(0, bytesRead),
+        totalSize,
+      };
+    } finally {
+      await handle.close();
+    }
   }
 
   async getReadableStream(key: string): Promise<{
