@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
   Calendar,
@@ -128,8 +128,198 @@ export default function ComposePage() {
   const [scheduleAt, setScheduleAt] = useState(defaultScheduleDateTime);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [draftRestored, setDraftRestored] = useState(false);
+  const draftHydratedRef = useRef(false);
+  const hasSavedDraftChannelsRef = useRef(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // 1. Restore any in-progress draft from localStorage on mount
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      draftHydratedRef.current = true;
+      return;
+    }
+    try {
+      const raw = window.localStorage.getItem("cadence_compose_draft");
+      if (raw) {
+        const d = JSON.parse(raw) as Record<string, unknown>;
+        const hasContent =
+          (Array.isArray(d.assets) && d.assets.length > 0) ||
+          Boolean(d.title) ||
+          Boolean(d.baseCaption) ||
+          Boolean(d.ytCustomTitle) ||
+          Boolean(d.igCustomCaption);
+
+        if (Array.isArray(d.selectedAccountIds) && d.selectedAccountIds.length > 0) {
+          setSelectedAccountIds(d.selectedAccountIds as string[]);
+          hasSavedDraftChannelsRef.current = true;
+        }
+        if (Array.isArray(d.assets)) setAssets(d.assets as UploadedAsset[]);
+        if (typeof d.title === "string") setTitle(d.title);
+        if (typeof d.baseCaption === "string") setBaseCaption(d.baseCaption);
+        if (typeof d.ytPrivacy === "string") {
+          setYtPrivacy(d.ytPrivacy as "private" | "unlisted" | "public");
+        }
+        if (typeof d.ytCategoryId === "string") setYtCategoryId(d.ytCategoryId);
+        if (typeof d.ytIsShort === "boolean") setYtIsShort(d.ytIsShort);
+        if (typeof d.ytTags === "string") setYtTags(d.ytTags);
+        if (typeof d.ytLanguage === "string") setYtLanguage(d.ytLanguage);
+        if (typeof d.ytLicense === "string") {
+          setYtLicense(d.ytLicense as "youtube" | "creativeCommon");
+        }
+        if (typeof d.ytPlaylistId === "string") setYtPlaylistId(d.ytPlaylistId);
+        if (typeof d.ytMadeForKids === "boolean") setYtMadeForKids(d.ytMadeForKids);
+        if (typeof d.ytSyntheticMedia === "boolean") {
+          setYtSyntheticMedia(d.ytSyntheticMedia);
+        }
+        if (typeof d.ytNotifySubscribers === "boolean") {
+          setYtNotifySubscribers(d.ytNotifySubscribers);
+        }
+        if (typeof d.ytEmbeddable === "boolean") setYtEmbeddable(d.ytEmbeddable);
+        if (typeof d.ytFirstComment === "string") setYtFirstComment(d.ytFirstComment);
+        if (d.ytThumbnailAsset) {
+          setYtThumbnailAsset(d.ytThumbnailAsset as UploadedAsset);
+        }
+        if (typeof d.ytCustomTitle === "string") setYtCustomTitle(d.ytCustomTitle);
+        if (typeof d.ytCustomCaption === "string") setYtCustomCaption(d.ytCustomCaption);
+        if (typeof d.igMediaType === "string") {
+          setIgMediaType(d.igMediaType as "AUTO" | "REELS" | "IMAGE" | "CAROUSEL");
+        }
+        if (typeof d.igShareToFeed === "boolean") setIgShareToFeed(d.igShareToFeed);
+        if (d.igCoverAsset) setIgCoverAsset(d.igCoverAsset as UploadedAsset);
+        if (typeof d.igThumbOffsetSec === "string") {
+          setIgThumbOffsetSec(d.igThumbOffsetSec);
+        }
+        if (typeof d.igCollaborators === "string") setIgCollaborators(d.igCollaborators);
+        if (typeof d.igUserTags === "string") setIgUserTags(d.igUserTags);
+        if (typeof d.igAudioName === "string") setIgAudioName(d.igAudioName);
+        if (typeof d.igLocationId === "string") setIgLocationId(d.igLocationId);
+        if (typeof d.igFirstComment === "string") setIgFirstComment(d.igFirstComment);
+        if (typeof d.igCustomCaption === "string") setIgCustomCaption(d.igCustomCaption);
+        if (d.channelOverrides && typeof d.channelOverrides === "object") {
+          setChannelOverrides(
+            d.channelOverrides as Record<string, PerChannelOverride>
+          );
+        }
+        if (typeof d.scheduleAt === "string") setScheduleAt(d.scheduleAt);
+        if (hasContent) {
+          setDraftRestored(true);
+        }
+      }
+    } catch {
+      // ignore corrupted draft
+    } finally {
+      draftHydratedRef.current = true;
+    }
+  }, []);
+
+  // 2. Auto-save in-progress draft whenever fields or media change
+  useEffect(() => {
+    if (!draftHydratedRef.current || typeof window === "undefined") return;
+    const hasContent =
+      assets.length > 0 ||
+      title.trim().length > 0 ||
+      baseCaption.trim().length > 0 ||
+      ytCustomTitle.trim().length > 0 ||
+      igCustomCaption.trim().length > 0;
+
+    if (!hasContent) {
+      window.localStorage.removeItem("cadence_compose_draft");
+      return;
+    }
+
+    try {
+      window.localStorage.setItem(
+        "cadence_compose_draft",
+        JSON.stringify({
+          selectedAccountIds,
+          assets,
+          title,
+          baseCaption,
+          ytPrivacy,
+          ytCategoryId,
+          ytIsShort,
+          ytTags,
+          ytLanguage,
+          ytLicense,
+          ytPlaylistId,
+          ytMadeForKids,
+          ytSyntheticMedia,
+          ytNotifySubscribers,
+          ytEmbeddable,
+          ytFirstComment,
+          ytThumbnailAsset,
+          ytCustomTitle,
+          ytCustomCaption,
+          igMediaType,
+          igShareToFeed,
+          igCoverAsset,
+          igThumbOffsetSec,
+          igCollaborators,
+          igUserTags,
+          igAudioName,
+          igLocationId,
+          igFirstComment,
+          igCustomCaption,
+          channelOverrides,
+          scheduleAt,
+          updatedAt: Date.now(),
+        })
+      );
+    } catch {
+      // ignore storage quota errors
+    }
+  }, [
+    selectedAccountIds,
+    assets,
+    title,
+    baseCaption,
+    ytPrivacy,
+    ytCategoryId,
+    ytIsShort,
+    ytTags,
+    ytLanguage,
+    ytLicense,
+    ytPlaylistId,
+    ytMadeForKids,
+    ytSyntheticMedia,
+    ytNotifySubscribers,
+    ytEmbeddable,
+    ytFirstComment,
+    ytThumbnailAsset,
+    ytCustomTitle,
+    ytCustomCaption,
+    igMediaType,
+    igShareToFeed,
+    igCoverAsset,
+    igThumbOffsetSec,
+    igCollaborators,
+    igUserTags,
+    igAudioName,
+    igLocationId,
+    igFirstComment,
+    igCustomCaption,
+    channelOverrides,
+    scheduleAt,
+  ]);
+
+  function discardLocalDraft() {
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem("cadence_compose_draft");
+    }
+    setAssets([]);
+    setTitle("");
+    setBaseCaption("");
+    setYtThumbnailAsset(null);
+    setYtCustomTitle("");
+    setYtCustomCaption("");
+    setIgCoverAsset(null);
+    setIgThumbOffsetSec("0");
+    setIgCustomCaption("");
+    setSelectedAccountIds(accounts.map((a) => a.id));
+    setDraftRestored(false);
+  }
 
   useEffect(() => {
     void (async () => {
@@ -154,7 +344,9 @@ export default function ComposePage() {
         const active = data.accounts.filter((a) => a.isActive);
         setAccounts(active);
         writeClientCache("compose_accounts", active);
-        setSelectedAccountIds(active.map((a) => a.id));
+        if (!hasSavedDraftChannelsRef.current) {
+          setSelectedAccountIds(active.map((a) => a.id));
+        }
 
         const initialOverrides: Record<string, PerChannelOverride> = {};
         for (const acc of active) {
@@ -450,6 +642,9 @@ export default function ComposePage() {
         throw new Error(data.error || "Failed to save post");
       }
 
+      if (typeof window !== "undefined") {
+        window.localStorage.removeItem("cadence_compose_draft");
+      }
       router.push("/");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save post");
@@ -460,13 +655,27 @@ export default function ComposePage() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-          Compose Cross-Post
-        </h1>
-        <p className="mt-1 text-sm text-slate-600">
-          Upload media once, configure full YouTube Studio & Instagram settings, and publish across all selected channels.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+            Compose Cross-Post
+          </h1>
+          <p className="mt-1 text-sm text-slate-600">
+            Upload media once, configure full YouTube Studio & Instagram settings, and publish across all selected channels.
+          </p>
+        </div>
+        {draftRestored && (
+          <div className="flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-medium text-indigo-800">
+            <span>Draft auto-saved</span>
+            <button
+              type="button"
+              onClick={discardLocalDraft}
+              className="rounded-md bg-white px-2 py-0.5 font-semibold text-indigo-700 shadow-2xs hover:bg-indigo-100"
+            >
+              Discard
+            </button>
+          </div>
+        )}
       </div>
 
       {error && (
