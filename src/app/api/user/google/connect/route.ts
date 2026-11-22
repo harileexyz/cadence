@@ -1,9 +1,24 @@
 import crypto from "node:crypto";
-import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { getGoogleOAuthConfig } from "@/lib/env";
 
 const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
+
+function createSignedGoogleSignInState(): string {
+  const secret = process.env.ENCRYPTION_KEY;
+  if (!secret || secret.length < 32) {
+    throw new Error("ENCRYPTION_KEY must be configured for OAuth state signing.");
+  }
+  const nonce = crypto.randomBytes(12).toString("hex");
+  const ts = Date.now().toString(36);
+  const payload = `g_login.${ts}.${nonce}`;
+  const sig = crypto
+    .createHmac("sha256", secret)
+    .update(payload)
+    .digest("hex")
+    .slice(0, 32);
+  return `${payload}.${sig}`;
+}
 
 export async function GET(request: Request) {
   const { clientId, isConfigured, redirectUri } = getGoogleOAuthConfig();
@@ -15,14 +30,7 @@ export async function GET(request: Request) {
     return NextResponse.redirect(loginUrl);
   }
 
-  const state = crypto.randomBytes(20).toString("hex");
-  const cookieStore = await cookies();
-  cookieStore.set("google_signin_state", state, {
-    httpOnly: true,
-    sameSite: "lax",
-    maxAge: 600,
-    path: "/",
-  });
+  const state = createSignedGoogleSignInState();
 
   const googleUserRedirectUri = `${origin}/api/user/google/callback`;
   const params = new URLSearchParams({

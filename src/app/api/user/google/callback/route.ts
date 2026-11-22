@@ -8,6 +8,31 @@ import { prisma } from "@/lib/prisma";
 
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 const GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v3/userinfo";
+const MAX_STATE_AGE_MS = 15 * 60 * 1000;
+
+function verifySignedGoogleSignInState(state: string): boolean {
+  const parts = state.split(".");
+  if (parts.length !== 4) return false;
+  const [prefix, tsBase36, nonce, sig] = parts;
+  if (prefix !== "g_login") return false;
+
+  const ts = Number.parseInt(tsBase36, 36);
+  if (!Number.isFinite(ts) || Date.now() - ts > MAX_STATE_AGE_MS) {
+    return false;
+  }
+
+  const secret = process.env.ENCRYPTION_KEY;
+  if (!secret || secret.length < 32) return false;
+  const payload = `${prefix}.${tsBase36}.${nonce}`;
+  const expectedSig = crypto
+    .createHmac("sha256", secret)
+    .update(payload)
+    .digest("hex")
+    .slice(0, 32);
+
+  if (sig.length !== expectedSig.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expectedSig));
+}
 
 export async function GET(request: Request) {
   const { clientId, clientSecret, redirectUri } = getGoogleOAuthConfig();
@@ -15,13 +40,27 @@ export async function GET(request: Request) {
   const loginUrl = new URL("/login", origin);
 
   const url = new URL(request.url);
+  const errorParam = url.searchParams.get("error");
+  if (errorParam) {
+    loginUrl.searchParams.set(
+      "error",
+      url.searchParams.get("error_description") || errorParam
+    );
+    return NextResponse.redirect(loginUrl);
+  }
+
   const code = url.searchParams.get("code");
   const state = url.searchParams.get("state");
   const cookieStore = await cookies();
   const expectedState = cookieStore.get("google_signin_state")?.value;
   cookieStore.delete("google_signin_state");
 
-  if (!code || !state || !expectedState || state !== expectedState) {
+  const isStateValid =
+    Boolean(state) &&
+    (verifySignedGoogleSignInState(state!) ||
+      (Boolean(expectedState) && state === expectedState));
+
+  if (!code || !isStateValid) {
     loginUrl.searchParams.set("error", "Google Sign-In session expired. Please try again.");
     return NextResponse.redirect(loginUrl);
   }

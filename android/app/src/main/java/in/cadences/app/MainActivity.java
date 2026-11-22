@@ -4,6 +4,9 @@ import android.graphics.Color;
 import android.os.Bundle;
 import android.view.View;
 import android.view.Window;
+import android.webkit.CookieManager;
+import android.webkit.WebSettings;
+import android.webkit.WebView;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowCompat;
@@ -15,6 +18,23 @@ public class MainActivity extends BridgeActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        // Ensure cookies (including cross-domain OAuth redirects) & DOM storage are active in WebView
+        if (this.bridge != null && this.bridge.getWebView() != null) {
+            WebView webView = this.bridge.getWebView();
+            CookieManager cookieManager = CookieManager.getInstance();
+            cookieManager.setAcceptCookie(true);
+            cookieManager.setAcceptThirdPartyCookies(webView, true);
+
+            WebSettings settings = webView.getSettings();
+            settings.setDomStorageEnabled(true);
+            settings.setJavaScriptCanOpenWindowsAutomatically(true);
+            // Strip "; wv" marker if present so Google OAuth never blocks the embedded WebView
+            String ua = settings.getUserAgentString();
+            if (ua != null && ua.contains("; wv")) {
+                settings.setUserAgentString(ua.replace("; wv", ""));
+            }
+        }
 
         Window window = getWindow();
         WindowCompat.setDecorFitsSystemWindows(window, false);
