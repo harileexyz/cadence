@@ -4,14 +4,15 @@ import { getGoogleOAuthConfig } from "@/lib/env";
 
 const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 
-function createSignedGoogleSignInState(): string {
+function createSignedGoogleSignInState(isMobile: boolean): string {
   const secret = process.env.ENCRYPTION_KEY;
   if (!secret || secret.length < 32) {
     throw new Error("ENCRYPTION_KEY must be configured for OAuth state signing.");
   }
   const nonce = crypto.randomBytes(12).toString("hex");
   const ts = Date.now().toString(36);
-  const payload = `g_login.${ts}.${nonce}`;
+  const mode = isMobile ? "g_mobile" : "g_login";
+  const payload = `${mode}.${ts}.${nonce}`;
   const sig = crypto
     .createHmac("sha256", secret)
     .update(payload)
@@ -23,6 +24,8 @@ function createSignedGoogleSignInState(): string {
 export async function GET(request: Request) {
   const { clientId, isConfigured, redirectUri } = getGoogleOAuthConfig();
   const origin = new URL(redirectUri).origin || new URL(request.url).origin;
+  const reqUrl = new URL(request.url);
+  const isMobile = reqUrl.searchParams.get("mobile") === "1";
 
   if (!isConfigured) {
     const loginUrl = new URL("/login", origin);
@@ -30,7 +33,7 @@ export async function GET(request: Request) {
     return NextResponse.redirect(loginUrl);
   }
 
-  const state = createSignedGoogleSignInState();
+  const state = createSignedGoogleSignInState(isMobile);
 
   const googleUserRedirectUri = `${origin}/api/user/google/callback`;
   const params = new URLSearchParams({

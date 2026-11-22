@@ -18,7 +18,7 @@ const MAX_STATE_AGE_MS = 15 * 60 * 1000; // 15 minutes
 function verifySignedOAuthState(
   state: string,
   expectedPlatform: string
-): { userId: string } | null {
+): { userId: string; isMobile: boolean } | null {
   const parts = state.split(".");
   if (parts.length !== 5) return null;
   const [userId, platform, tsBase36, nonce, sig] = parts;
@@ -43,7 +43,9 @@ function verifySignedOAuthState(
     Buffer.from(sig),
     Buffer.from(expectedSig)
   );
-  return valid ? { userId } : null;
+  return valid
+    ? { userId, isMobile: nonce.startsWith("m_") }
+    : null;
 }
 
 export async function GET(
@@ -183,6 +185,13 @@ export async function GET(
       addedOrUpdatedCount++;
     }
 
+    if (verifiedState.isMobile) {
+      return NextResponse.redirect(
+        `cadence://auth?connected=${encodeURIComponent(
+          `${rawPlatform}:${addedOrUpdatedCount}`
+        )}&next=%2Faccounts`
+      );
+    }
     accountsUrl.searchParams.set(
       "connected",
       `${rawPlatform}:${addedOrUpdatedCount}`
@@ -191,6 +200,11 @@ export async function GET(
   } catch (err) {
     const message =
       err instanceof Error ? err.message : "OAuth connection failed";
+    if (verifiedState.isMobile) {
+      return NextResponse.redirect(
+        `cadence://auth?error=${encodeURIComponent(message)}&next=%2Faccounts`
+      );
+    }
     accountsUrl.searchParams.set("error", message);
     return NextResponse.redirect(accountsUrl);
   }

@@ -12,14 +12,19 @@ const PLATFORM_MAP: Record<string, Platform> = {
   instagram: Platform.INSTAGRAM,
 };
 
-function createSignedOAuthState(userId: string, platform: string): string {
+function createSignedOAuthState(
+  userId: string,
+  platform: string,
+  isMobile: boolean
+): string {
   const secret = process.env.ENCRYPTION_KEY;
   if (!secret || secret.length < 32) {
     throw new Error("ENCRYPTION_KEY must be configured for OAuth state signing.");
   }
   const nonce = crypto.randomBytes(12).toString("hex");
   const ts = Date.now().toString(36);
-  const payload = `${userId}.${platform}.${ts}.${nonce}`;
+  const mode = isMobile ? "m" : "w";
+  const payload = `${userId}.${platform}.${ts}.${mode}_${nonce}`;
   const sig = crypto
     .createHmac("sha256", secret)
     .update(payload)
@@ -45,7 +50,23 @@ export async function GET(
       ? new URL(getGoogleOAuthConfig().redirectUri).origin
       : reqOrigin || getAppUrl();
 
-  const user = await getCurrentUser();
+  let user = await getCurrentUser();
+  if (!user) {
+    const mobileSession = new URL(request.url).searchParams.get("session")?.trim();
+    if (mobileSession) {
+      const foundSession = await prisma.session.findUnique({
+        where: { token: mobileSession },
+        include: { user: true },
+      });
+      if (
+        foundSession &&
+        foundSession.expiresAt.getTime() > Date.now() &&
+        !foundSession.user.isSuspended
+      ) {
+        user = foundSession.user;
+      }
+    }
+  }
   if (!user) {
     return NextResponse.redirect(new URL("/login", fallbackOrigin));
   }
@@ -61,7 +82,8 @@ export async function GET(
   }
 
   try {
-    const state = createSignedOAuthState(user.id, key);
+    const isMobile = new URL(request.url).searchParams.get("mobile") === "1";
+    const state = createSignedOAuthState(user.id, key, isMobile);
     const adapter = getPlatformAdapter(platform);
     const authUrl = adapter.getAuthUrl(state);
 

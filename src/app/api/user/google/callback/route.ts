@@ -10,19 +10,24 @@ const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 const GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v3/userinfo";
 const MAX_STATE_AGE_MS = 15 * 60 * 1000;
 
-function verifySignedGoogleSignInState(state: string): boolean {
+function verifySignedGoogleSignInState(state: string): {
+  valid: boolean;
+  isMobile: boolean;
+} {
   const parts = state.split(".");
-  if (parts.length !== 4) return false;
+  if (parts.length !== 4) return { valid: false, isMobile: false };
   const [prefix, tsBase36, nonce, sig] = parts;
-  if (prefix !== "g_login") return false;
+  if (prefix !== "g_login" && prefix !== "g_mobile") {
+    return { valid: false, isMobile: false };
+  }
 
   const ts = Number.parseInt(tsBase36, 36);
   if (!Number.isFinite(ts) || Date.now() - ts > MAX_STATE_AGE_MS) {
-    return false;
+    return { valid: false, isMobile: false };
   }
 
   const secret = process.env.ENCRYPTION_KEY;
-  if (!secret || secret.length < 32) return false;
+  if (!secret || secret.length < 32) return { valid: false, isMobile: false };
   const payload = `${prefix}.${tsBase36}.${nonce}`;
   const expectedSig = crypto
     .createHmac("sha256", secret)
@@ -30,8 +35,9 @@ function verifySignedGoogleSignInState(state: string): boolean {
     .digest("hex")
     .slice(0, 32);
 
-  if (sig.length !== expectedSig.length) return false;
-  return crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expectedSig));
+  if (sig.length !== expectedSig.length) return { valid: false, isMobile: false };
+  const ok = crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expectedSig));
+  return { valid: ok, isMobile: ok && prefix === "g_mobile" };
 }
 
 export async function GET(request: Request) {
@@ -55,10 +61,11 @@ export async function GET(request: Request) {
   const expectedState = cookieStore.get("google_signin_state")?.value;
   cookieStore.delete("google_signin_state");
 
+  const stateCheck = state
+    ? verifySignedGoogleSignInState(state)
+    : { valid: false, isMobile: false };
   const isStateValid =
-    Boolean(state) &&
-    (verifySignedGoogleSignInState(state!) ||
-      (Boolean(expectedState) && state === expectedState));
+    stateCheck.valid || (Boolean(expectedState) && state === expectedState);
 
   if (!code || !isStateValid) {
     loginUrl.searchParams.set("error", "Google Sign-In session expired. Please try again.");
@@ -132,11 +139,21 @@ export async function GET(request: Request) {
       }
     }
 
-    await createSession(user.id);
+    const sessionToken = await createSession(user.id);
+    if (stateCheck.isMobile) {
+      return NextResponse.redirect(
+        `cadence://auth?session=${encodeURIComponent(sessionToken)}&next=%2F`
+      );
+    }
     return NextResponse.redirect(new URL("/", origin));
   } catch (err) {
     const message =
       err instanceof Error ? err.message : "Google Sign-In failed.";
+    if (stateCheck.isMobile) {
+      return NextResponse.redirect(
+        `cadence://auth?error=${encodeURIComponent(message)}`
+      );
+    }
     loginUrl.searchParams.set("error", message);
     return NextResponse.redirect(loginUrl);
   }
