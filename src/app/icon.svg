@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <linearGradient id="cadenceGrad" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#4f46e5"/>
+      <stop offset="60%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#db2777"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="16" fill="url(#cadenceGrad)"/>
+  <path d="M32 14L14 23L32 32L50 23L32 14Z" fill="#ffffff"/>
+  <path d="M14 32L32 41L50 32" stroke="#ffffff" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M14 41L32 50L50 41" stroke="#e0e7ff" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

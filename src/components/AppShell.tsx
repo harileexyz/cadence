@@ -137,17 +137,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </Link>
 
               <nav className="hidden items-center gap-5 text-sm font-medium text-slate-600 md:flex">
-                <Link href="/guide" className="hover:text-slate-900">
-                  Guide
+                <Link href="/#features" className="hover:text-slate-900">
+                  Features
+                </Link>
+                <Link href="/#compare" className="hover:text-slate-900">
+                  Compare
                 </Link>
                 <Link href="/pricing" className="hover:text-slate-900">
                   Pricing
                 </Link>
+                <Link href="/guide" className="hover:text-slate-900">
+                  Guide
+                </Link>
                 <Link href="/privacy" className="hover:text-slate-900">
                   Privacy
-                </Link>
-                <Link href="/terms" className="hover:text-slate-900">
-                  Terms
                 </Link>
               </nav>
             </div>
