@@ -3,6 +3,7 @@ import { z } from "zod";
 import { evaluateRegistrationAccess } from "@/lib/admin";
 import { createSession, hashPassword } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
 
 const registerSchema = z.object({
   name: z.string().min(1, "Name is required").max(80),
@@ -12,6 +13,18 @@ const registerSchema = z.object({
 });
 
 export async function POST(request: Request) {
+  const ip = getClientIp(request);
+  const rl = checkRateLimit({
+    key: `register:${ip}`,
+    limit: 8,
+    windowMs: 15 * 60 * 1000,
+  });
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: `Too many sign-up attempts. Try again in ${rl.retryAfterSec}s.` },
+      { status: 429 }
+    );
+  }
   const body = await request.json().catch(() => null);
   const parsed = registerSchema.safeParse(body);
   if (!parsed.success) {

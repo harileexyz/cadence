@@ -13,7 +13,10 @@ const PLATFORM_MAP: Record<string, Platform> = {
 };
 
 function createSignedOAuthState(userId: string, platform: string): string {
-  const secret = process.env.ENCRYPTION_KEY || "fallback-state-secret";
+  const secret = process.env.ENCRYPTION_KEY;
+  if (!secret || secret.length < 32) {
+    throw new Error("ENCRYPTION_KEY must be configured for OAuth state signing.");
+  }
   const nonce = crypto.randomBytes(12).toString("hex");
   const ts = Date.now().toString(36);
   const payload = `${userId}.${platform}.${ts}.${nonce}`;

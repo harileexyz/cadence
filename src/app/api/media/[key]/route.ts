@@ -28,6 +28,9 @@ export async function GET(
         "Content-Type": asset.mimeType,
         "Content-Length": String(sizeBytes ?? asset.sizeBytes),
         "Cache-Control": "public, max-age=31536000, immutable",
+        "X-Content-Type-Options": "nosniff",
+        "Content-Security-Policy":
+          "default-src 'none'; media-src 'self'; img-src 'self'; style-src 'unsafe-inline'",
       },
     });
   } catch {

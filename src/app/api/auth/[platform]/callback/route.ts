@@ -29,7 +29,8 @@ function verifySignedOAuthState(
     return null;
   }
 
-  const secret = process.env.ENCRYPTION_KEY || "fallback-state-secret";
+  const secret = process.env.ENCRYPTION_KEY;
+  if (!secret || secret.length < 32) return null;
   const payload = `${userId}.${platform}.${tsBase36}.${nonce}`;
   const expectedSig = crypto
     .createHmac("sha256", secret)
@@ -82,15 +83,19 @@ export async function GET(
 
   const verifiedState = verifySignedOAuthState(state, key);
   const cookieUser = await getCurrentUser();
-  const userId = verifiedState?.userId ?? cookieUser?.id;
 
-  if (!userId || !verifiedState) {
+  if (
+    !verifiedState ||
+    (cookieUser && cookieUser.id !== verifiedState.userId)
+  ) {
     accountsUrl.searchParams.set(
       "error",
       "Invalid or expired OAuth state. Please try connecting again."
     );
     return NextResponse.redirect(accountsUrl);
   }
+
+  const userId = verifiedState.userId;
 
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) {

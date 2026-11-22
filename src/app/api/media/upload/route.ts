@@ -44,11 +44,21 @@ export async function POST(request: Request) {
       );
     }
 
-    const isAllowed =
-      file.type.startsWith("video/") || file.type.startsWith("image/");
-    if (!isAllowed) {
+    const ALLOWED_MIME_TYPES = new Set([
+      "video/mp4",
+      "video/quicktime",
+      "video/webm",
+      "video/x-m4v",
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "image/webp",
+    ]);
+    if (!ALLOWED_MIME_TYPES.has(file.type.toLowerCase())) {
       return NextResponse.json(
-        { error: `Unsupported file type: ${file.type || "unknown"}` },
+        {
+          error: `Unsupported file type (${file.type || "unknown"}). Upload MP4, MOV, WebM, JPG, PNG, or WebP.`,
+        },
         { status: 400 }
       );
     }

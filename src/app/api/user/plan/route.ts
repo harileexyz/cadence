@@ -1,6 +1,7 @@
 import { PlanTier } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { isFounderEmail } from "@/lib/admin";
 import { getCurrentUser } from "@/lib/auth";
 import { getUserUsageSummary } from "@/lib/plans";
 import { prisma } from "@/lib/prisma";
@@ -19,6 +20,22 @@ export async function POST(request: Request) {
   const parsed = planSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid plan tier" }, { status: 400 });
+  }
+
+  // Prevent uninvited public users from self-upgrading to PRO without a Beta Invite or Founder grant
+  if (
+    parsed.data.plan === "PRO" &&
+    user.plan !== "PRO" &&
+    !user.isBetaTester &&
+    !isFounderEmail(user.email)
+  ) {
+    return NextResponse.json(
+      {
+        error:
+          "Creator Pro upgrades during beta require a Beta Tester invite or Founder approval.",
+      },
+      { status: 403 }
+    );
   }
 
   const updated = await prisma.user.update({
