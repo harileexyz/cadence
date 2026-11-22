@@ -10,9 +10,11 @@ import {
   Check,
   CheckCircle2,
   ChevronDown,
+  Download,
   Film,
   MessageCircle,
   ShieldCheck,
+  Smartphone,
   Sparkles,
   X,
 } from "lucide-react";
@@ -249,6 +251,15 @@ export function MarketingLanding({
                   </Link>
                 </>
               )}
+              <a
+                href="/downloads/cadence-android.apk"
+                download="cadence-android.apk"
+                className="inline-flex items-center gap-2 rounded-xl border border-emerald-300 bg-emerald-50/90 px-4 py-3 text-xs font-semibold text-emerald-900 shadow-2xs transition hover:bg-emerald-100 sm:text-sm"
+              >
+                <Smartphone className="h-4 w-4 text-emerald-700" />
+                <span>Download Android App (.APK)</span>
+                <Download className="h-3.5 w-3.5 text-emerald-700" />
+              </a>
               <Link
                 href="/guide"
                 className="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-3 text-xs font-semibold text-indigo-600 hover:bg-indigo-50 sm:text-sm"

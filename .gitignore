@@ -6,3 +6,8 @@ out
 uploads/
 *.tsbuildinfo
 next-env.d.ts
+android/.gradle/
+android/build/
+android/app/build/
+android/capacitor-cordova-android-plugins/build/
+android/local.properties
