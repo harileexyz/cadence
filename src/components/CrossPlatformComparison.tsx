@@ -19,11 +19,33 @@ import {
 export function CrossPlatformComparison({
   pairs,
   onPreviewPost,
+  scopeLabel,
 }: {
   pairs: CrossPlatformPair[];
   onPreviewPost: (post: PostEngagementDTO) => void;
+  scopeLabel?: string;
 }) {
-  if (pairs.length === 0) return null;
+  if (pairs.length === 0) {
+    return (
+      <section className="rounded-2xl border border-dashed border-slate-200 bg-white p-5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <ArrowLeftRight className="h-4 w-4 text-indigo-600" />
+            <h2 className="text-sm font-semibold text-slate-900">
+              Cross-Platform Post Comparison
+              {scopeLabel ? ` · ${scopeLabel}` : ""}
+            </h2>
+          </div>
+          <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-medium text-slate-500">
+            0 matched pairs yet
+          </span>
+        </div>
+        <p className="mt-1.5 text-xs text-slate-500">
+          Cross-post a video to both YouTube and Instagram from Compose (or publish matching titles within 30 days) to compare YouTube Shorts vs. Instagram Reels side-by-side here.
+        </p>
+      </section>
+    );
+  }
 
   return (
     <section className="space-y-3">

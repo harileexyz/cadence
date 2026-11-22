@@ -232,8 +232,19 @@ export default function EngagementPage() {
 
   const crossPostPairs = useMemo(() => {
     if (!data) return [];
-    return matchCrossPostedPairs(data.recentPosts, data.crossPostLinks);
-  }, [data]);
+    const allPairs = matchCrossPostedPairs(
+      data.recentPosts,
+      data.crossPostLinks
+    );
+    if (activeChannel) {
+      return allPairs.filter(
+        (p) =>
+          p.youtube.accountId === activeChannel.accountId ||
+          p.instagram.accountId === activeChannel.accountId
+      );
+    }
+    return allPairs;
+  }, [data, activeChannel]);
 
   return (
     <div className="space-y-6">
@@ -887,11 +898,12 @@ export default function EngagementPage() {
             </section>
           )}
 
-          {/* Cross-Platform Side-by-Side Post Comparison (All Platforms Overview) */}
-          {selectedPlatform === "ALL" && !activeChannel && (
+          {/* Cross-Platform Side-by-Side Post Comparison (shown in All Platforms & Single-Account views) */}
+          {(selectedPlatform === "ALL" || activeChannel) && (
             <CrossPlatformComparison
               pairs={crossPostPairs}
               onPreviewPost={(p) => setPreviewPost(p)}
+              scopeLabel={activeChannel?.displayName}
             />
           )}
 

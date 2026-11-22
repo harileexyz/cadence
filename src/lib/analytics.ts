@@ -264,16 +264,20 @@ function normalizeTitleTokens(raw: string): { normalized: string; tokens: Set<st
   return { normalized: cleaned, tokens };
 }
 
-function titleSimilarity(a: string, b: string): number {
-  const na = normalizeTitleTokens(a);
-  const nb = normalizeTitleTokens(b);
+function titleSimilarity(a: PostEngagementDTO, b: PostEngagementDTO): number {
+  const textA = `${a.title} ${(a.description || "").slice(0, 180)}`;
+  const textB = `${b.title} ${(b.description || "").slice(0, 180)}`;
+  const na = normalizeTitleTokens(textA);
+  const nb = normalizeTitleTokens(textB);
+  const titleA = normalizeTitleTokens(a.title);
+  const titleB = normalizeTitleTokens(b.title);
 
-  if (na.normalized.length >= 12 && nb.normalized.length >= 12) {
+  if (titleA.normalized.length >= 12 && titleB.normalized.length >= 12) {
     if (
-      na.normalized.includes(nb.normalized.slice(0, 18)) ||
-      nb.normalized.includes(na.normalized.slice(0, 18))
+      titleA.normalized.includes(titleB.normalized.slice(0, 16)) ||
+      titleB.normalized.includes(titleA.normalized.slice(0, 16))
     ) {
-      return 0.9;
+      return 0.95;
     }
   }
 
@@ -283,8 +287,16 @@ function titleSimilarity(a: string, b: string): number {
   for (const t of na.tokens) {
     if (nb.tokens.has(t)) overlap++;
   }
+  const minSize = Math.min(na.tokens.size, nb.tokens.size);
   const union = new Set([...na.tokens, ...nb.tokens]).size;
-  return union > 0 ? overlap / union : 0;
+  const jaccard = union > 0 ? overlap / union : 0;
+  const containment = minSize > 0 ? overlap / minSize : 0;
+
+  // Strong match if at least 2 meaningful keywords overlap and either Jaccard >= 0.22 or containment >= 0.4
+  if (overlap >= 2 && (jaccard >= 0.22 || containment >= 0.4)) {
+    return Math.max(jaccard, containment * 0.8);
+  }
+  return jaccard;
 }
 
 export function matchCrossPostedPairs(
@@ -340,8 +352,8 @@ export function matchCrossPostedPairs(
     }
   }
 
-  // 2. Smart fuzzy title + 10-day window matching for manually cross-posted videos
-  const MAX_DIFF_MS = 10 * 24 * 60 * 60 * 1000;
+  // 2. Smart fuzzy title/caption + 30-day window matching for manually cross-posted videos
+  const MAX_DIFF_MS = 30 * 24 * 60 * 60 * 1000;
   for (const yt of ytPosts) {
     if (usedYt.has(yt.id)) continue;
     const ytTime = new Date(yt.publishedAt).getTime();
@@ -354,8 +366,8 @@ export function matchCrossPostedPairs(
       const igTime = new Date(ig.publishedAt).getTime();
       if (Math.abs(ytTime - igTime) > MAX_DIFF_MS) continue;
 
-      const score = titleSimilarity(yt.title, ig.title);
-      if (score >= 0.35 && score > bestScore) {
+      const score = titleSimilarity(yt, ig);
+      if (score >= 0.22 && score > bestScore) {
         bestScore = score;
         bestIg = ig;
       }
