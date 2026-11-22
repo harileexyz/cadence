@@ -256,7 +256,7 @@ export default function EngagementPage() {
   }, [data, activeChannel]);
 
   return (
-    <div className="min-w-0 space-y-4 overflow-x-hidden sm:space-y-6">
+    <div className="min-w-0 space-y-4 overflow-x-clip sm:space-y-6">
       {/* Top Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>

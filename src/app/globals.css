@@ -7,10 +7,8 @@ body {
   background-color: #f8fafc;
   color: #0f172a;
   max-width: 100%;
-  overflow-x: hidden;
+  overflow-x: clip;
   -webkit-tap-highlight-color: transparent;
-  overscroll-behavior-y: contain;
-  touch-action: manipulation;
 }
 
 /* Native mobile feel: prevent accidental text selection on buttons, nav & tabs */

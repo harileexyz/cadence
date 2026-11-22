@@ -452,7 +452,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Main Column (shifted right by w-60 on desktop) */}
-      <div className="flex min-h-screen min-w-0 flex-1 flex-col overflow-x-hidden md:pl-60">
+      <div className="flex min-h-screen min-w-0 flex-1 flex-col overflow-x-clip md:pl-60">
         {/* Compact Mobile Top Header (md:hidden) */}
         <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-slate-200 bg-white/95 px-4 backdrop-blur md:hidden">
           <Link
