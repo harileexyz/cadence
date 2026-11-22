@@ -3,9 +3,9 @@ import { hashPassword, verifyPassword } from "./auth";
 
 describe("auth password hashing", () => {
   it("hashes and verifies password round-trip", () => {
-    const hash = hashPassword("bufferclone123");
-    expect(hash).not.toContain("bufferclone123");
-    expect(verifyPassword("bufferclone123", hash)).toBe(true);
+    const hash = hashPassword("cadence123");
+    expect(hash).not.toContain("cadence123");
+    expect(verifyPassword("cadence123", hash)).toBe(true);
     expect(verifyPassword("wrong-password", hash)).toBe(false);
   });
 

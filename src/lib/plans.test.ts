@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { getUserUsageSummary, PLAN_SPECS } from "./plans";
 
 describe("SaaS plan tiers & usage limits", () => {
-  it("gives FREE tier 6 channels (2x Buffer's 3-channel limit) and PRO unlimited", () => {
+  it("gives FREE tier 6 channels (2x the standard 3-channel limit) and PRO unlimited", () => {
     expect(PLAN_SPECS.FREE.maxChannels).toBe(6);
     expect(PLAN_SPECS.FREE.maxPostsPerMonth).toBe(30);
     expect(PLAN_SPECS.PRO.maxChannels).toBeNull();

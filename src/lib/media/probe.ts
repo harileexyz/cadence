@@ -84,7 +84,7 @@ export async function probeMediaBuffer(
 ): Promise<MediaMetadata> {
   const tempPath = path.join(
     os.tmpdir(),
-    `buffer-probe-${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`
+    `cadence-probe-${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`
   );
 
   try {

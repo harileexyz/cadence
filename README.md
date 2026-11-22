@@ -1,6 +1,6 @@
-# BufferClone (YouTube & Instagram MVP)
+# Cadence (`cadences.in`) — Multi-Channel Social Media Scheduler & Analytics Studio
 
-Self-hosted, unlimited-channel social media scheduler and cross-poster built with Next.js, PostgreSQL, Prisma, FFmpeg, and a background publishing worker.
+Multi-tenant SaaS social media scheduler, cross-poster, and analytics dashboard for **YouTube Videos & Shorts** and **Instagram Reels, Posts & Carousels**, built with Next.js 15, PostgreSQL, Prisma, FFmpeg, and Capacitor Android.
 
 ## Prerequisites
 

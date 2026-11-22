@@ -4,7 +4,8 @@ import { cookies } from "next/headers";
 import { getAppUrl } from "@/lib/env";
 import { prisma } from "@/lib/prisma";
 
-export const SESSION_COOKIE_NAME = "buffer_session";
+export const SESSION_COOKIE_NAME = "cadence_session";
+export const LEGACY_SESSION_COOKIE_NAME = "buffer_session";
 const SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
 export function hashPassword(password: string): string {
@@ -49,16 +50,21 @@ export async function createSession(userId: string): Promise<string> {
 
 export async function clearSession(): Promise<void> {
   const cookieStore = await cookies();
-  const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+  const token =
+    cookieStore.get(SESSION_COOKIE_NAME)?.value ||
+    cookieStore.get(LEGACY_SESSION_COOKIE_NAME)?.value;
   if (token) {
     await prisma.session.deleteMany({ where: { token } }).catch(() => {});
   }
   cookieStore.delete(SESSION_COOKIE_NAME);
+  cookieStore.delete(LEGACY_SESSION_COOKIE_NAME);
 }
 
 export async function getCurrentUser(): Promise<User | null> {
   const cookieStore = await cookies();
-  const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+  const token =
+    cookieStore.get(SESSION_COOKIE_NAME)?.value ||
+    cookieStore.get(LEGACY_SESSION_COOKIE_NAME)?.value;
   if (!token) {
     return null;
   }

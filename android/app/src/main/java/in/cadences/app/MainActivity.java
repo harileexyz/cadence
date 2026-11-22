@@ -120,13 +120,19 @@ public class MainActivity extends BridgeActivity {
             if (uri.getQueryParameter("mobile") == null) {
                 builder.appendQueryParameter("mobile", "1");
             }
-            // If connecting a social channel from inside the WebView, forward the buffer_session token
+            // If connecting a social channel from inside the WebView, forward the cadence_session token
             // so the system browser can authenticate the connect request even if the user logged in inside WebView.
             String cookies = CookieManager.getInstance().getCookie("https://cadences.in");
             if (cookies != null && uri.getQueryParameter("session") == null) {
                 for (String part : cookies.split(";")) {
                     String trimmed = part.trim();
-                    if (trimmed.startsWith("buffer_session=")) {
+                    if (trimmed.startsWith("cadence_session=")) {
+                        String token = trimmed.substring("cadence_session=".length()).trim();
+                        if (!token.isEmpty()) {
+                            builder.appendQueryParameter("session", token);
+                        }
+                        break;
+                    } else if (trimmed.startsWith("buffer_session=")) {
                         String token = trimmed.substring("buffer_session=".length()).trim();
                         if (!token.isEmpty()) {
                             builder.appendQueryParameter("session", token);

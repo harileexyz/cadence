@@ -15,7 +15,7 @@ export const PLAN_SPECS: Record<PlanTier, PlanSpec> = {
     tier: "FREE",
     name: "Generous Free",
     priceMonthlyUsd: 0,
-    maxChannels: 6, // 2x Buffer's 3-channel free limit
+    maxChannels: 6, // 2x the standard 3-channel free limit
     maxPostsPerMonth: 30,
     maxFileSizeMb: 100,
     features: [

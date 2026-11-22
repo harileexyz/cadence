@@ -1,18 +1,18 @@
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: buffer_clone_postgres
+    container_name: cadence_postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: buffer
-      POSTGRES_PASSWORD: buffer_dev_password
-      POSTGRES_DB: buffer_clone
+      POSTGRES_USER: cadence
+      POSTGRES_PASSWORD: cadence_dev_password
+      POSTGRES_DB: cadence
     ports:
       - "5438:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U buffer -d buffer_clone"]
+      test: ["CMD-SHELL", "pg_isready -U cadence -d cadence"]
       interval: 5s
       timeout: 5s
       retries: 10

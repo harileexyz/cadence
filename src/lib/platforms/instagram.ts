@@ -19,7 +19,7 @@ const IG_TOKEN_BASE = "https://graph.instagram.com";
 
 /**
  * Self-serve customer scopes for connecting Instagram Professional (Creator / Business)
- * accounts via Meta's User Access Token OAuth flow (same flow used by Buffer / Later).
+ * accounts via Meta's User Access Token OAuth flow.
  */
 const FB_IG_USER_SCOPES = [
   "instagram_basic",
