@@ -81,9 +81,45 @@ export default function LoginPage() {
             type="button"
             disabled={googleLoading || loading}
             onClick={() => {
-              setGoogleLoading(true);
-              setError(null);
-              window.location.assign("/api/user/google/connect");
+              void (async () => {
+                setGoogleLoading(true);
+                setError(null);
+                try {
+                  const cap = (
+                    window as unknown as {
+                      Capacitor?: { isNativePlatform?: () => boolean };
+                    }
+                  ).Capacitor;
+                  if (cap?.isNativePlatform?.()) {
+                    const { FirebaseAuthentication } = await import(
+                      "@capacitor-firebase/authentication"
+                    );
+                    const result = await FirebaseAuthentication.signInWithGoogle();
+                    const idToken = result.credential?.idToken;
+                    if (idToken) {
+                      const res = await fetch("/api/user/firebase", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ idToken }),
+                      });
+                      const data = (await res.json()) as { error?: string };
+                      if (!res.ok) {
+                        throw new Error(data.error || "Google Sign-In failed");
+                      }
+                      router.push("/");
+                      router.refresh();
+                      return;
+                    }
+                  }
+                } catch (err) {
+                  setError(
+                    err instanceof Error ? err.message : "Google Sign-In failed"
+                  );
+                  setGoogleLoading(false);
+                  return;
+                }
+                window.location.assign("/api/user/google/connect");
+              })();
             }}
             className="flex w-full items-center justify-center gap-2.5 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 shadow-2xs transition hover:bg-slate-50 disabled:opacity-60"
           >

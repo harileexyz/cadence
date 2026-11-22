@@ -96,6 +96,50 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     void loadMe();
   }, [loadMe, pathname]);
 
+  // Register Android FCM Push Notifications automatically once logged in inside Capacitor app
+  useEffect(() => {
+    if (!me?.user?.id || typeof window === "undefined") return;
+    const cap = (
+      window as unknown as {
+        Capacitor?: { isNativePlatform?: () => boolean };
+      }
+    ).Capacitor;
+    if (!cap?.isNativePlatform?.()) return;
+
+    let mounted = true;
+    void (async () => {
+      try {
+        const { PushNotifications } = await import(
+          "@capacitor/push-notifications"
+        );
+        let perm = await PushNotifications.checkPermissions();
+        if (perm.receive === "prompt") {
+          perm = await PushNotifications.requestPermissions();
+        }
+        if (perm.receive !== "granted" || !mounted) return;
+
+        await PushNotifications.addListener("registration", async (token) => {
+          await fetch("/api/push/register", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              token: token.value,
+              platform: "android",
+            }),
+          }).catch(() => {});
+        });
+
+        await PushNotifications.register();
+      } catch {
+        // Ignore if push plugin is unavailable
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, [me?.user?.id]);
+
   async function handleLogout() {
     await fetch("/api/user/logout", { method: "POST" });
     setMe({ user: null, usage: null });

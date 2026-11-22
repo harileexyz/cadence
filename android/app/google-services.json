@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "420527287569",
+    "project_id": "psychic-era-515102-r4",
+    "storage_bucket": "psychic-era-515102-r4.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:420527287569:android:46c14747119d99bf6530b0",
+        "android_client_info": {
+          "package_name": "in.cadences.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "420527287569-64u0u4e3msbr3ncne1jee6kn49i5nivq.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCEeuSTIHixzp4QOi-xx3oUkw1IuEH-TZ8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "420527287569-64u0u4e3msbr3ncne1jee6kn49i5nivq.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

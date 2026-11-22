@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { PlatformBadge } from "@/components/PlatformBadge";
 import { VideoCoverScrubber } from "@/components/VideoCoverScrubber";
+import { uploadMediaDirectToFirebase } from "@/lib/firebase/client";
 import {
   YOUTUBE_CATEGORIES,
   type AccountDefaults,
@@ -119,12 +120,25 @@ export default function ComposePage() {
   const [showPerChannel, setShowPerChannel] = useState(false);
 
   const [scheduleAt, setScheduleAt] = useState(defaultScheduleDateTime);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     void (async () => {
-      const res = await fetch("/api/accounts");
+      const [res, meRes] = await Promise.all([
+        fetch("/api/accounts"),
+        fetch("/api/user/me"),
+      ]);
+      if (meRes.ok) {
+        const meData = (await meRes.json()) as {
+          user?: { id: string } | null;
+        };
+        if (meData.user?.id) {
+          setCurrentUserId(meData.user.id);
+        }
+      }
       if (res.status === 401) {
         router.push("/login");
         return;
@@ -189,6 +203,43 @@ export default function ComposePage() {
   }
 
   async function uploadSingleFile(file: File): Promise<UploadedAsset> {
+    // Primary path: Direct browser-to-Firebase Storage upload (0 MB RAM on Render)
+    if (currentUserId) {
+      try {
+        setUploadProgress(0);
+        const { storageKey, publicUrl, metadata } =
+          await uploadMediaDirectToFirebase(file, currentUserId, (pct) =>
+            setUploadProgress(pct)
+          );
+
+        const regRes = await fetch("/api/media/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            filename: file.name,
+            mimeType: file.type || "video/mp4",
+            sizeBytes: file.size,
+            storageKey,
+            publicUrl,
+            width: metadata.width,
+            height: metadata.height,
+            durationSec: metadata.durationSec,
+          }),
+        });
+        const regData = (await regRes.json()) as {
+          asset?: UploadedAsset;
+          error?: string;
+        };
+        if (!regRes.ok || !regData.asset) {
+          throw new Error(regData.error || `Failed to register ${file.name}`);
+        }
+        return regData.asset;
+      } finally {
+        setUploadProgress(null);
+      }
+    }
+
+    // Fallback path: Direct binary stream to /api/media/upload
     const res = await fetch("/api/media/upload", {
       method: "POST",
       headers: {
@@ -500,9 +551,19 @@ export default function ComposePage() {
           )}
           <span className="mt-2 text-sm font-medium text-slate-700">
             {uploading
-              ? "Uploading & inspecting with ffprobe..."
+              ? uploadProgress !== null
+                ? `Uploading directly to Firebase Storage... ${uploadProgress}%`
+                : "Finalizing upload..."
               : "Click to upload MP4/MOV video or JPG/PNG images"}
           </span>
+          {uploading && uploadProgress !== null && (
+            <div className="mt-2.5 h-2 w-full max-w-xs overflow-hidden rounded-full bg-slate-200">
+              <div
+                className="h-full rounded-full bg-indigo-600 transition-all duration-150"
+                style={{ width: `${uploadProgress}%` }}
+              />
+            </div>
+          )}
           <span className="mt-1 text-xs text-slate-500">
             Up to 250 MB per file. Multiple files create an Instagram Carousel.
           </span>

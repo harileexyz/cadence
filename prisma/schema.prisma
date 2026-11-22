@@ -47,9 +47,22 @@ model User {
   updatedAt            DateTime        @updatedAt
   sessions             Session[]
   apiKeys              ApiKey[]
+  deviceTokens         DeviceToken[]
   socialAccounts       SocialAccount[]
   mediaAssets          MediaAsset[]
   posts                Post[]
+}
+
+model DeviceToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  platform  String   @default("android")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model BetaInvite {

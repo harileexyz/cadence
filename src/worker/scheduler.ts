@@ -7,6 +7,10 @@ import {
 } from "@prisma/client";
 import { decryptToken, encryptToken } from "@/lib/crypto";
 import {
+  deleteFirebaseStorageObject,
+  sendPushNotificationToUser,
+} from "@/lib/firebase/admin";
+import {
   getPlatformAdapter,
   PlatformError,
   type PlatformAdapter,
@@ -220,9 +224,12 @@ export async function processTarget(
     }));
 
     // If using local storage, restore any missing files from Postgres fileData backup
-    // only when the file is actually missing on disk (avoids loading bytea into RAM).
+    // only when the file is actually missing on disk (skip for Firebase Storage CDN URLs).
     if (storageProvider.kind === "local") {
       for (const asset of mediaAssets) {
+        if (asset.publicUrl.startsWith("https://firebasestorage.googleapis.com/")) {
+          continue;
+        }
         asset.publicUrl = storageProvider.getPublicUrl(asset.storageKey);
         const existsOnDisk = storageProvider.has
           ? await storageProvider.has(asset.storageKey)
@@ -291,6 +298,19 @@ export async function processTarget(
         publishedAt: new Date(),
       },
     });
+
+    const platformLabel =
+      target.account.platform === Platform.YOUTUBE ? "YouTube" : "Instagram";
+    void sendPushNotificationToUser(prismaClient, target.post.userId, {
+      title: `Published to ${platformLabel}`,
+      body: `${target.account.displayName}: ${
+        target.post.title || target.post.baseCaption.slice(0, 80) || "Post is live!"
+      }`,
+      data: {
+        postId: target.postId,
+        url: result.externalPostUrl || "/",
+      },
+    });
   } catch (err) {
     const message =
       err instanceof Error ? err.message : "Unknown publishing error";
@@ -317,6 +337,17 @@ export async function processTarget(
           status: TargetStatus.FAILED,
           nextRetryAt: null,
           errorMessage: message,
+        },
+      });
+
+      const platformLabel =
+        target.account.platform === Platform.YOUTUBE ? "YouTube" : "Instagram";
+      void sendPushNotificationToUser(prismaClient, target.post.userId, {
+        title: `${platformLabel} upload needs attention`,
+        body: `${target.account.displayName}: ${message.slice(0, 110)}`,
+        data: {
+          postId: target.postId,
+          url: "/",
         },
       });
     }
@@ -468,6 +499,7 @@ export async function cleanupPublishedMediaAssets(
     select: {
       id: true,
       storageKey: true,
+      publicUrl: true,
     },
     take: 25,
   });
@@ -475,7 +507,11 @@ export async function cleanupPublishedMediaAssets(
   let deletedCount = 0;
   for (const asset of candidates) {
     try {
-      await storageProvider.delete(asset.storageKey);
+      if (asset.publicUrl.startsWith("https://firebasestorage.googleapis.com/")) {
+        await deleteFirebaseStorageObject(asset.storageKey);
+      } else {
+        await storageProvider.delete(asset.storageKey);
+      }
       await prismaClient.mediaAsset.update({
         where: { id: asset.id },
         data: { storageDeleted: true, fileData: null },

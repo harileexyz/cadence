@@ -305,30 +305,52 @@ export function createYouTubeAdapter(fetchFn: typeof fetch = fetch): PlatformAda
       }
 
       let uploadRes: Response;
-      const streamedObj = input.storage.getReadableStream
-        ? await input.storage.getReadableStream(asset.storageKey)
-        : null;
-      if (streamedObj?.stream) {
+      if (asset.publicUrl.startsWith("https://firebasestorage.googleapis.com/")) {
+        const remoteRes = await fetchFn(asset.publicUrl);
+        if (!remoteRes.ok || !remoteRes.body) {
+          throw new PlatformError(
+            `Failed to stream video from Firebase Storage (${remoteRes.status}).`,
+            { retryable: isRetryableStatus(remoteRes.status), statusCode: remoteRes.status }
+          );
+        }
+        const contentLen =
+          remoteRes.headers.get("content-length") || String(asset.sizeBytes);
         const initWithDuplex: RequestInit & { duplex: "half" } = {
           method: "PUT",
           headers: {
             "Content-Type": asset.mimeType,
-            "Content-Length": String(streamedObj.sizeBytes ?? asset.sizeBytes),
+            "Content-Length": contentLen,
           },
-          body: streamedObj.stream,
+          body: remoteRes.body,
           duplex: "half",
         };
         uploadRes = await fetchFn(uploadUrl, initWithDuplex);
       } else {
-        const videoBuffer = await input.storage.getBuffer(asset.storageKey);
-        uploadRes = await fetchFn(uploadUrl, {
-          method: "PUT",
-          headers: {
-            "Content-Type": asset.mimeType,
-            "Content-Length": String(videoBuffer.byteLength),
-          },
-          body: new Uint8Array(videoBuffer),
-        });
+        const streamedObj = input.storage.getReadableStream
+          ? await input.storage.getReadableStream(asset.storageKey)
+          : null;
+        if (streamedObj?.stream) {
+          const initWithDuplex: RequestInit & { duplex: "half" } = {
+            method: "PUT",
+            headers: {
+              "Content-Type": asset.mimeType,
+              "Content-Length": String(streamedObj.sizeBytes ?? asset.sizeBytes),
+            },
+            body: streamedObj.stream,
+            duplex: "half",
+          };
+          uploadRes = await fetchFn(uploadUrl, initWithDuplex);
+        } else {
+          const videoBuffer = await input.storage.getBuffer(asset.storageKey);
+          uploadRes = await fetchFn(uploadUrl, {
+            method: "PUT",
+            headers: {
+              "Content-Type": asset.mimeType,
+              "Content-Length": String(videoBuffer.byteLength),
+            },
+            body: new Uint8Array(videoBuffer),
+          });
+        }
       }
 
       if (!uploadRes.ok) {
@@ -353,7 +375,11 @@ export function createYouTubeAdapter(fetchFn: typeof fetch = fetch): PlatformAda
         try {
           const thumbAsset = await input.getMediaAssetById(opts.thumbnailAssetId);
           if (thumbAsset) {
-            const thumbBuffer = await input.storage.getBuffer(thumbAsset.storageKey);
+            const thumbBuffer = thumbAsset.publicUrl.startsWith(
+              "https://firebasestorage.googleapis.com/"
+            )
+              ? Buffer.from(await (await fetchFn(thumbAsset.publicUrl)).arrayBuffer())
+              : await input.storage.getBuffer(thumbAsset.storageKey);
             await fetchFn(
               `${YOUTUBE_THUMBNAIL_UPLOAD_URL}?videoId=${encodeURIComponent(videoId)}&uploadType=media`,
               {
