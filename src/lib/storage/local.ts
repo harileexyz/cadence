@@ -29,7 +29,11 @@ export class LocalStorageProvider implements StorageProvider {
 
   getPublicUrl(key: string): string {
     const safeKey = sanitizeKey(key);
-    return `${getPublicMediaBaseUrl()}/api/media/${encodeURIComponent(safeKey)}`;
+    const encodedPath = safeKey
+      .split("/")
+      .map((seg) => encodeURIComponent(seg))
+      .join("/");
+    return `${getPublicMediaBaseUrl()}/api/media/${encodedPath}`;
   }
 
   async upload(params: {

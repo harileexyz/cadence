@@ -199,6 +199,25 @@ export async function processTarget(
     const adapter = adapterLookup(target.account.platform);
     const mediaAssets = target.post.media.map((m) => m.mediaAsset);
 
+    // If using local storage, restore any missing files from Postgres fileData backup
+    // (survives Render container redeploys) and refresh publicUrl to current APP_URL.
+    if (storageProvider.kind === "local") {
+      for (const asset of mediaAssets) {
+        asset.publicUrl = storageProvider.getPublicUrl(asset.storageKey);
+        try {
+          await storageProvider.getBuffer(asset.storageKey);
+        } catch {
+          if (asset.fileData && asset.fileData.byteLength > 0) {
+            await storageProvider.upload({
+              key: asset.storageKey,
+              buffer: Buffer.from(asset.fileData),
+              contentType: asset.mimeType,
+            });
+          }
+        }
+      }
+    }
+
     const result = await adapter.publishTarget({
       account: target.account,
       accessToken,
@@ -267,9 +286,58 @@ export async function processTarget(
   });
 }
 
+const STALE_PROCESSING_TIMEOUT_MS = 4 * 60 * 1000; // 4 minutes
+
+export async function recoverStaleProcessingTargets(
+  prismaClient: PrismaClient,
+  now: Date = new Date()
+): Promise<number> {
+  const cutoff = new Date(now.getTime() - STALE_PROCESSING_TIMEOUT_MS);
+  const staleTargets = await prismaClient.postTarget.findMany({
+    where: {
+      status: TargetStatus.PROCESSING,
+      post: { updatedAt: { lte: cutoff } },
+    },
+    select: { id: true, postId: true },
+  });
+
+  if (staleTargets.length === 0) return 0;
+
+  const affectedPostIds = new Set<string>();
+  for (const t of staleTargets) {
+    affectedPostIds.add(t.postId);
+    await prismaClient.postTarget.update({
+      where: { id: t.id },
+      data: {
+        status: TargetStatus.FAILED,
+        nextRetryAt: null,
+        errorMessage:
+          "Publishing was interrupted by a server restart or container redeploy. Click Retry to publish.",
+      },
+    });
+  }
+
+  for (const postId of affectedPostIds) {
+    const siblings = await prismaClient.postTarget.findMany({
+      where: { postId },
+      select: { status: true },
+    });
+    const nextStatus = computeParentPostStatus(siblings.map((s) => s.status));
+    await prismaClient.post.update({
+      where: { id: postId },
+      data: { status: nextStatus },
+    });
+  }
+
+  return staleTargets.length;
+}
+
 export async function runSchedulerTick(
   deps: ProcessTargetDeps
 ): Promise<number> {
+  await recoverStaleProcessingTargets(deps.prismaClient, deps.now).catch(
+    () => {}
+  );
   const dueIds = await claimDueTargetIds(deps.prismaClient, 5);
   for (const id of dueIds) {
     await processTarget(id, deps);
@@ -355,7 +423,7 @@ export async function cleanupPublishedMediaAssets(
       await storageProvider.delete(asset.storageKey);
       await prismaClient.mediaAsset.update({
         where: { id: asset.id },
-        data: { storageDeleted: true },
+        data: { storageDeleted: true, fileData: null },
       });
       deletedCount++;
     } catch (err) {

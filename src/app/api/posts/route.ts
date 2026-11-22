@@ -33,7 +33,22 @@ export async function GET() {
     orderBy: [{ scheduledAt: "desc" }, { createdAt: "desc" }],
     include: {
       media: {
-        include: { mediaAsset: true },
+        include: {
+          mediaAsset: {
+            select: {
+              id: true,
+              filename: true,
+              mimeType: true,
+              sizeBytes: true,
+              width: true,
+              height: true,
+              durationSec: true,
+              storageKey: true,
+              publicUrl: true,
+              storageDeleted: true,
+            },
+          },
+        },
         orderBy: { orderIndex: "asc" },
       },
       targets: {
@@ -195,7 +210,25 @@ export async function POST(request: Request) {
       },
     },
     include: {
-      media: { include: { mediaAsset: true }, orderBy: { orderIndex: "asc" } },
+      media: {
+        include: {
+          mediaAsset: {
+            select: {
+              id: true,
+              filename: true,
+              mimeType: true,
+              sizeBytes: true,
+              width: true,
+              height: true,
+              durationSec: true,
+              storageKey: true,
+              publicUrl: true,
+              storageDeleted: true,
+            },
+          },
+        },
+        orderBy: { orderIndex: "asc" },
+      },
       targets: {
         include: {
           account: {

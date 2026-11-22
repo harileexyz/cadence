@@ -127,6 +127,7 @@ model MediaAsset {
   durationSec    Float?
   storageKey     String      @unique
   publicUrl      String
+  fileData       Bytes?
   storageDeleted Boolean     @default(false)
   createdAt      DateTime    @default(now())
   user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)

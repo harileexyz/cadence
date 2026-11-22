@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import path from "node:path";
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
+import { isS3Configured } from "@/lib/env";
 import { probeMediaBuffer } from "@/lib/media/probe";
 import { PLAN_SPECS } from "@/lib/plans";
 import { prisma } from "@/lib/prisma";
@@ -66,7 +67,7 @@ export async function POST(request: Request) {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
     const ext = path.extname(file.name).replace(/^\./, "") || "bin";
-    const key = `${user.id}/${Date.now()}-${crypto.randomUUID()}.${ext}`;
+    const key = `${user.id}-${Date.now()}-${crypto.randomUUID()}.${ext}`;
 
     const [metadata, stored] = await Promise.all([
       probeMediaBuffer(buffer, ext),
@@ -88,6 +89,21 @@ export async function POST(request: Request) {
         durationSec: metadata.durationSec,
         storageKey: stored.key,
         publicUrl: stored.publicUrl,
+        fileData: isS3Configured() ? null : buffer,
+      },
+      select: {
+        id: true,
+        userId: true,
+        filename: true,
+        mimeType: true,
+        sizeBytes: true,
+        width: true,
+        height: true,
+        durationSec: true,
+        storageKey: true,
+        publicUrl: true,
+        storageDeleted: true,
+        createdAt: true,
       },
     });
 

@@ -15,6 +15,7 @@ function makeMedia(overrides: Partial<MediaAsset> = {}): MediaAsset {
     durationSec: 25,
     storageKey: "clip.mp4",
     publicUrl: "https://cdn.example.com/clip.mp4",
+    fileData: null,
     storageDeleted: false,
     createdAt: new Date(),
     ...overrides,

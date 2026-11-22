@@ -3,7 +3,7 @@ import path from "node:path";
 import { Platform, PostStatus, Prisma, TargetStatus } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { authenticateApiRequest } from "@/lib/apiKeys";
-import { getAppUrl } from "@/lib/env";
+import { getAppUrl, isS3Configured } from "@/lib/env";
 import { probeMediaBuffer } from "@/lib/media/probe";
 import { getUserUsageSummary, PLAN_SPECS } from "@/lib/plans";
 import type { AccountDefaults } from "@/lib/platforms/types";
@@ -140,7 +140,7 @@ export async function POST(request: Request) {
     // Upload main media asset
     const mainBuffer = Buffer.from(await file.arrayBuffer());
     const mainExt = path.extname(file.name).replace(/^\./, "") || "mp4";
-    const mainKey = `${user.id}/${Date.now()}-${crypto.randomUUID()}.${mainExt}`;
+    const mainKey = `${user.id}-${Date.now()}-${crypto.randomUUID()}.${mainExt}`;
 
     const [mainMeta, mainStored] = await Promise.all([
       probeMediaBuffer(mainBuffer, mainExt),
@@ -162,6 +162,14 @@ export async function POST(request: Request) {
         durationSec: mainMeta.durationSec,
         storageKey: mainStored.key,
         publicUrl: mainStored.publicUrl,
+        fileData: isS3Configured() ? null : mainBuffer,
+      },
+      select: {
+        id: true,
+        filename: true,
+        width: true,
+        height: true,
+        durationSec: true,
       },
     });
 
@@ -175,7 +183,7 @@ export async function POST(request: Request) {
       const thumbBuf = Buffer.from(await thumbnailFile.arrayBuffer());
       const thumbExt =
         path.extname(thumbnailFile.name).replace(/^\./, "") || "jpg";
-      const thumbKey = `${user.id}/${Date.now()}-${crypto.randomUUID()}.${thumbExt}`;
+      const thumbKey = `${user.id}-${Date.now()}-${crypto.randomUUID()}.${thumbExt}`;
       const [thumbMeta, thumbStored] = await Promise.all([
         probeMediaBuffer(thumbBuf, thumbExt),
         getStorageProvider().upload({
@@ -195,7 +203,9 @@ export async function POST(request: Request) {
           durationSec: null,
           storageKey: thumbStored.key,
           publicUrl: thumbStored.publicUrl,
+          fileData: isS3Configured() ? null : thumbBuf,
         },
+        select: { id: true },
       });
       thumbnailAssetId = thumbAsset.id;
     }

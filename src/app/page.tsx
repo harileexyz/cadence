@@ -444,10 +444,22 @@ export default function QueuePage() {
                           )}
 
                           {target.status === "PROCESSING" && (
-                            <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700">
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                              Publishing
-                            </span>
+                            <div className="flex items-center gap-2">
+                              <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700">
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                Publishing
+                              </span>
+                              <button
+                                type="button"
+                                disabled={busyId === target.id}
+                                onClick={() => void handleRetryTarget(target.id)}
+                                className="inline-flex items-center gap-1 rounded-md border border-amber-300 bg-white px-2 py-0.5 text-[11px] font-medium text-amber-800 hover:bg-amber-50 disabled:opacity-50"
+                                title="Force retry if stuck"
+                              >
+                                <RefreshCw className="h-3 w-3" />
+                                Retry
+                              </button>
+                            </div>
                           )}
 
                           {target.status === "PENDING" && (
