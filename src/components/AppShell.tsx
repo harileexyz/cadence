@@ -17,6 +17,12 @@ import {
   Users,
 } from "lucide-react";
 import { Footer } from "@/components/Footer";
+import {
+  clearClientCache,
+  isCapacitorNativeApp,
+  readClientCache,
+  writeClientCache,
+} from "@/lib/mobileCache";
 
 interface UserMeResponse {
   user: {
@@ -60,7 +66,10 @@ const MOBILE_TAB_ITEMS = [
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [me, setMe] = useState<UserMeResponse | null>(null);
+  const [me, setMe] = useState<UserMeResponse | null>(() =>
+    readClientCache<UserMeResponse>("user_me", 15 * 60 * 1000)
+  );
+  const [isNativeApp, setIsNativeApp] = useState(false);
   const [banner, setBanner] = useState<{
     enabled: boolean;
     message: string;
@@ -76,6 +85,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       if (meRes.ok) {
         const data = (await meRes.json()) as UserMeResponse;
         setMe(data);
+        writeClientCache("user_me", data);
       }
       if (annRes.ok) {
         const ann = (await annRes.json()) as {
@@ -93,8 +103,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
+    setIsNativeApp(isCapacitorNativeApp());
     void loadMe();
-  }, [loadMe, pathname]);
+  }, [loadMe]);
+
+  // Refresh user state only when navigating out of auth pages, and prefetch main mobile tabs
+  useEffect(() => {
+    if (!me?.user && pathname !== "/login" && pathname !== "/register") {
+      void loadMe();
+    }
+    if (me?.user) {
+      for (const item of MOBILE_TAB_ITEMS) {
+        router.prefetch(item.href);
+      }
+    }
+  }, [pathname, me?.user, loadMe, router]);
 
   // Register Android FCM Push Notifications automatically once logged in inside Capacitor app
   useEffect(() => {
@@ -142,6 +165,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   async function handleLogout() {
     await fetch("/api/user/logout", { method: "POST" });
+    clearClientCache();
     setMe({ user: null, usage: null });
     router.push("/login");
     router.refresh();
@@ -481,13 +505,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           )}
           {children}
         </main>
-        <Footer />
+        {!isNativeApp && <Footer />}
       </div>
 
       {/* Mobile Native-Style Bottom Tab Navigation Bar */}
       <nav
         aria-label="Mobile Navigation"
-        className="safe-area-pb fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur md:hidden"
+        className="safe-area-pb fixed inset-x-0 bottom-0 z-40 border-t border-slate-200/90 bg-white/95 shadow-[0_-4px_20px_rgba(15,23,42,0.06)] backdrop-blur md:hidden"
       >
         <div className="grid h-16 grid-cols-5">
           {MOBILE_TAB_ITEMS.map((item) => {
@@ -501,7 +525,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex flex-col items-center justify-center gap-1 text-[11px] font-medium transition ${
+                className={`flex flex-col items-center justify-center gap-1 text-[11px] font-medium transition active:scale-95 ${
                   isActive
                     ? "text-indigo-600"
                     : "text-slate-500 active:text-slate-900"

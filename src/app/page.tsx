@@ -27,6 +27,11 @@ import {
 import { MarketingLanding } from "@/components/MarketingLanding";
 import { OnboardingChecklist } from "@/components/OnboardingChecklist";
 import { PlatformBadge } from "@/components/PlatformBadge";
+import {
+  isCapacitorNativeApp,
+  readClientCache,
+  writeClientCache,
+} from "@/lib/mobileCache";
 
 interface MediaAssetDTO {
   id: string;
@@ -93,25 +98,25 @@ function StatusPill({ status }: { status: PostDTO["status"] }) {
 
 export default function QueuePage() {
   const router = useRouter();
-  const [posts, setPosts] = useState<PostDTO[]>([]);
-  const [loading, setLoading] = useState(true);
+  const initialPosts = readClientCache<PostDTO[]>("posts");
+  const [posts, setPosts] = useState<PostDTO[]>(() => initialPosts ?? []);
+  const [loading, setLoading] = useState(() => initialPosts === null);
+  const [isNativeApp, setIsNativeApp] = useState(false);
   const [isUnauthenticated, setIsUnauthenticated] = useState(false);
   const [showPublicWebsite, setShowPublicWebsite] = useState(false);
   const [filter, setFilter] = useState<FilterTab>("ALL");
   const [busyId, setBusyId] = useState<string | null>(null);
   const [previewPost, setPreviewPost] = useState<PostDTO | null>(null);
 
+  useEffect(() => {
+    setIsNativeApp(isCapacitorNativeApp());
+  }, []);
+
   const loadPosts = useCallback(async () => {
     try {
       const res = await fetch("/api/posts");
       if (res.status === 401) {
-        const isNativeApp =
-          typeof window !== "undefined" &&
-          Boolean(
-            (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } })
-              .Capacitor?.isNativePlatform?.()
-          );
-        if (isNativeApp) {
+        if (isCapacitorNativeApp()) {
           router.replace("/login");
           return;
         }
@@ -122,6 +127,7 @@ export default function QueuePage() {
         setIsUnauthenticated(false);
         const data = (await res.json()) as { posts: PostDTO[] };
         setPosts(data.posts);
+        writeClientCache("posts", data.posts);
       }
     } finally {
       setLoading(false);
@@ -225,14 +231,16 @@ export default function QueuePage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
-          <button
-            type="button"
-            onClick={() => setShowPublicWebsite(true)}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50/70 px-3 py-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-100"
-          >
-            <Globe className="h-3.5 w-3.5" />
-            <span>Preview Public Website</span>
-          </button>
+          {!isNativeApp && (
+            <button
+              type="button"
+              onClick={() => setShowPublicWebsite(true)}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50/70 px-3 py-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-100"
+            >
+              <Globe className="h-3.5 w-3.5" />
+              <span>Preview Public Website</span>
+            </button>
+          )}
           <button
             type="button"
             onClick={() => void loadPosts()}
@@ -269,13 +277,17 @@ export default function QueuePage() {
         </div>
         <Link
           href="/accounts"
-          className="flex flex-col justify-between rounded-xl border border-indigo-200 bg-indigo-50/60 p-4 transition hover:bg-indigo-50"
+          className="flex flex-col justify-between rounded-xl border border-indigo-200 bg-indigo-50/60 p-4 transition hover:bg-indigo-50 active:scale-[0.98]"
         >
           <p className="text-xs font-semibold text-indigo-700">
-            Next Step: Connect Instagram
+            {hasInstagramConnected
+              ? "Channels Connected"
+              : "Next Step: Connect Instagram"}
           </p>
           <p className="mt-1 text-xs text-slate-600">
-            YouTube is active · Click to add your Instagram handles →
+            {hasInstagramConnected
+              ? "YouTube & Instagram active · Manage channels →"
+              : "YouTube is active · Click to add your Instagram handles →"}
           </p>
           <span className="mt-1 hidden">
             {String(hasYouTubeConnected)}-{String(hasInstagramConnected)}

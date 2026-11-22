@@ -44,12 +44,14 @@ import {
   type EngagementResponse,
   type PostEngagementDTO,
 } from "@/lib/analytics";
+import { readClientCache, writeClientCache } from "@/lib/mobileCache";
 
 type SortMode = "latest" | "views" | "likes" | "rate";
 
 export default function EngagementPage() {
-  const [data, setData] = useState<EngagementResponse | null>(null);
-  const [loading, setLoading] = useState(true);
+  const initialData = readClientCache<EngagementResponse>("engagement");
+  const [data, setData] = useState<EngagementResponse | null>(() => initialData);
+  const [loading, setLoading] = useState(() => initialData === null);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -117,6 +119,7 @@ export default function EngagementPage() {
       }
       const payload = (await res.json()) as EngagementResponse;
       setData(payload);
+      writeClientCache("engagement", payload);
       if (typeof window !== "undefined") {
         const acc = new URLSearchParams(window.location.search).get("account");
         if (acc) {

@@ -19,6 +19,7 @@ import {
 import { PlatformBadge } from "@/components/PlatformBadge";
 import { VideoCoverScrubber } from "@/components/VideoCoverScrubber";
 import { uploadMediaDirectToFirebase } from "@/lib/firebase/client";
+import { readClientCache, writeClientCache } from "@/lib/mobileCache";
 import {
   YOUTUBE_CATEGORIES,
   type AccountDefaults,
@@ -69,8 +70,13 @@ function defaultScheduleDateTime(): string {
 export default function ComposePage() {
   const router = useRouter();
 
-  const [accounts, setAccounts] = useState<AccountDTO[]>([]);
-  const [selectedAccountIds, setSelectedAccountIds] = useState<string[]>([]);
+  const cachedComposeAccounts = readClientCache<AccountDTO[]>("compose_accounts");
+  const [accounts, setAccounts] = useState<AccountDTO[]>(
+    () => cachedComposeAccounts ?? []
+  );
+  const [selectedAccountIds, setSelectedAccountIds] = useState<string[]>(() =>
+    (cachedComposeAccounts ?? []).map((a) => a.id)
+  );
   const [assets, setAssets] = useState<UploadedAsset[]>([]);
   const [uploading, setUploading] = useState(false);
 
@@ -147,6 +153,7 @@ export default function ComposePage() {
         const data = (await res.json()) as { accounts: AccountDTO[] };
         const active = data.accounts.filter((a) => a.isActive);
         setAccounts(active);
+        writeClientCache("compose_accounts", active);
         setSelectedAccountIds(active.map((a) => a.id));
 
         const initialOverrides: Record<string, PerChannelOverride> = {};

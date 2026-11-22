@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { PlatformBadge } from "@/components/PlatformBadge";
 import { YOUTUBE_CATEGORIES, type AccountDefaults } from "@/lib/platforms/types";
+import { readClientCache, writeClientCache } from "@/lib/mobileCache";
 
 interface AccountDTO {
   id: string;
@@ -75,9 +76,17 @@ function AccountsContent() {
   const connectedBanner = searchParams.get("connected");
   const errorBanner = searchParams.get("error");
 
-  const [accounts, setAccounts] = useState<AccountDTO[]>([]);
-  const [usage, setUsage] = useState<UsageDTO | null>(null);
-  const [loading, setLoading] = useState(true);
+  const cachedAccounts = readClientCache<{
+    accounts: AccountDTO[];
+    usage: UsageDTO;
+  }>("accounts");
+  const [accounts, setAccounts] = useState<AccountDTO[]>(
+    () => cachedAccounts?.accounts ?? []
+  );
+  const [usage, setUsage] = useState<UsageDTO | null>(
+    () => cachedAccounts?.usage ?? null
+  );
+  const [loading, setLoading] = useState(() => cachedAccounts === null);
   const [showIgModal, setShowIgModal] = useState(false);
 
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -100,6 +109,7 @@ function AccountsContent() {
         };
         setAccounts(data.accounts);
         setUsage(data.usage);
+        writeClientCache("accounts", data);
       }
     } finally {
       setLoading(false);

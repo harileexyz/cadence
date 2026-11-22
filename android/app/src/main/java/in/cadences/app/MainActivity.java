@@ -25,12 +25,20 @@ public class MainActivity extends BridgeActivity {
 
         if (this.bridge != null && this.bridge.getWebView() != null) {
             WebView webView = this.bridge.getWebView();
+            webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+            webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
+            webView.setVerticalScrollBarEnabled(false);
+            webView.setHorizontalScrollBarEnabled(false);
+
             CookieManager cookieManager = CookieManager.getInstance();
             cookieManager.setAcceptCookie(true);
             cookieManager.setAcceptThirdPartyCookies(webView, true);
 
             WebSettings settings = webView.getSettings();
             settings.setDomStorageEnabled(true);
+            settings.setDatabaseEnabled(true);
+            settings.setCacheMode(WebSettings.LOAD_DEFAULT);
+            settings.setTextZoom(100);
             settings.setJavaScriptCanOpenWindowsAutomatically(true);
             String ua = settings.getUserAgentString();
             if (ua != null && ua.contains("; wv")) {
@@ -97,6 +105,19 @@ public class MainActivity extends BridgeActivity {
         super.onNewIntent(intent);
         setIntent(intent);
         handleDeepLinkIntent(intent);
+    }
+
+    @Override
+    @SuppressWarnings("deprecation")
+    public void onBackPressed() {
+        if (this.bridge != null && this.bridge.getWebView() != null) {
+            WebView webView = this.bridge.getWebView();
+            if (webView.canGoBack()) {
+                webView.goBack();
+                return;
+            }
+        }
+        moveTaskToBack(true);
     }
 
     private boolean shouldOpenInSystemBrowser(Uri uri) {
