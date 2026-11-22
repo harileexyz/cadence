@@ -21,6 +21,22 @@ export function readClientCache<T>(key: string, maxAgeMs = 10 * 60 * 1000): T | 
   return null;
 }
 
+export function isClientCacheFresh(key: string, freshMs = 90_000): boolean {
+  const mem = memoryCache.get(key);
+  if (mem && Date.now() - mem.ts <= freshMs) {
+    return true;
+  }
+  if (typeof window === "undefined") return false;
+  try {
+    const raw = window.sessionStorage.getItem(`cadence_cache:${key}`);
+    if (!raw) return false;
+    const parsed = JSON.parse(raw) as { ts: number };
+    return Date.now() - parsed.ts <= freshMs;
+  } catch {
+    return false;
+  }
+}
+
 export function writeClientCache<T>(key: string, data: T): void {
   const entry = { data, ts: Date.now() };
   memoryCache.set(key, entry);

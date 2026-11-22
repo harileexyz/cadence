@@ -44,7 +44,11 @@ import {
   type EngagementResponse,
   type PostEngagementDTO,
 } from "@/lib/analytics";
-import { readClientCache, writeClientCache } from "@/lib/mobileCache";
+import {
+  isClientCacheFresh,
+  readClientCache,
+  writeClientCache,
+} from "@/lib/mobileCache";
 
 type SortMode = "latest" | "views" | "likes" | "rate";
 
@@ -138,7 +142,9 @@ export default function EngagementPage() {
   }, []);
 
   useEffect(() => {
-    void loadEngagement(false);
+    if (!isClientCacheFresh("engagement", 120_000)) {
+      void loadEngagement(false);
+    }
   }, [loadEngagement]);
 
   const platformChannels = useMemo(() => {

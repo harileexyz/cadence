@@ -70,6 +70,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     readClientCache<UserMeResponse>("user_me", 15 * 60 * 1000)
   );
   const [isNativeApp, setIsNativeApp] = useState(false);
+  const [pendingHref, setPendingHref] = useState<string | null>(null);
   const [banner, setBanner] = useState<{
     enabled: boolean;
     message: string;
@@ -109,6 +110,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   // Refresh user state only when navigating out of auth pages, and prefetch main mobile tabs
   useEffect(() => {
+    setPendingHref(null);
     if (!me?.user && pathname !== "/login" && pathname !== "/register") {
       void loadMe();
     }
@@ -513,18 +515,29 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         aria-label="Mobile Navigation"
         className="safe-area-pb fixed inset-x-0 bottom-0 z-40 border-t border-slate-200/90 bg-white/95 shadow-[0_-4px_20px_rgba(15,23,42,0.06)] backdrop-blur md:hidden"
       >
+        {pendingHref && pendingHref !== pathname && (
+          <div className="h-0.5 w-full overflow-hidden bg-indigo-100">
+            <div className="h-full w-1/2 animate-pulse rounded-full bg-indigo-600" />
+          </div>
+        )}
         <div className="grid h-16 grid-cols-5">
           {MOBILE_TAB_ITEMS.map((item) => {
             const Icon = item.icon;
+            const effectivePath = pendingHref ?? pathname;
             const isActive =
               item.href === "/"
-                ? pathname === "/"
-                : pathname.startsWith(item.href);
+                ? effectivePath === "/"
+                : effectivePath.startsWith(item.href);
 
             return (
-              <Link
+              <button
                 key={item.href}
-                href={item.href}
+                type="button"
+                onClick={() => {
+                  if (pathname === item.href) return;
+                  setPendingHref(item.href);
+                  router.push(item.href);
+                }}
                 className={`flex flex-col items-center justify-center gap-1 text-[11px] font-medium transition active:scale-95 ${
                   isActive
                     ? "text-indigo-600"
@@ -539,7 +552,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   <Icon className="h-5 w-5" />
                 </span>
                 <span>{item.label}</span>
-              </Link>
+              </button>
             );
           })}
         </div>
