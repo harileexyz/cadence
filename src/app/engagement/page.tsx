@@ -24,6 +24,7 @@ import {
   Users,
   Youtube,
 } from "lucide-react";
+import { ChannelErrorNotice } from "@/components/ChannelErrorNotice";
 import { ContentViewerModal } from "@/components/ContentViewerModal";
 import { CrossPlatformComparison } from "@/components/CrossPlatformComparison";
 import {
@@ -517,9 +518,10 @@ export default function EngagementPage() {
                     {activeChannel.displayName}
                   </h2>
                   {activeChannel.error && (
-                    <p className="mt-1 text-xs text-red-600">
-                      {activeChannel.error}
-                    </p>
+                    <ChannelErrorNotice
+                      platform={activeChannel.platform}
+                      rawError={activeChannel.error}
+                    />
                   )}
                 </div>
               </div>
@@ -787,14 +789,22 @@ export default function EngagementPage() {
                     ch.platform === "YOUTUBE" ? "#ef4444" : "#ec4899";
 
                   return (
-                    <button
+                    <div
                       key={ch.accountId}
-                      type="button"
+                      role="button"
+                      tabIndex={0}
                       onClick={() => {
                         selectAccount(ch.accountId);
                         window.scrollTo({ top: 0, behavior: "smooth" });
                       }}
-                      className="group flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-2xs transition hover:border-indigo-300 hover:shadow-sm"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          selectAccount(ch.accountId);
+                          window.scrollTo({ top: 0, behavior: "smooth" });
+                        }
+                      }}
+                      className="group flex cursor-pointer flex-col justify-between rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-2xs transition hover:border-indigo-300 hover:shadow-sm"
                     >
                       <div>
                         <div className="flex items-start justify-between gap-3">
@@ -831,9 +841,10 @@ export default function EngagementPage() {
                         </div>
 
                         {ch.error ? (
-                          <p className="mt-4 rounded-lg bg-red-50 p-2.5 text-xs text-red-600">
-                            {ch.error}
-                          </p>
+                          <ChannelErrorNotice
+                            platform={ch.platform}
+                            rawError={ch.error}
+                          />
                         ) : (
                           <>
                             <div className="mt-4 grid grid-cols-2 gap-2.5">
@@ -900,7 +911,7 @@ export default function EngagementPage() {
                         <span>View account dashboard</span>
                         <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
                       </div>
-                    </button>
+                    </div>
                   );
                 })}
               </div>
