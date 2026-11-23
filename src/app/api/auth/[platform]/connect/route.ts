@@ -44,11 +44,7 @@ export async function GET(
     return NextResponse.json({ error: "Unsupported platform" }, { status: 404 });
   }
 
-  const reqOrigin = new URL(request.url).origin;
-  const fallbackOrigin =
-    platform === Platform.YOUTUBE
-      ? new URL(getGoogleOAuthConfig().redirectUri).origin
-      : reqOrigin || getAppUrl();
+  const fallbackOrigin = getAppUrl() || new URL(getGoogleOAuthConfig().redirectUri).origin;
 
   let user = await getCurrentUser();
   if (!user) {
@@ -71,8 +67,14 @@ export async function GET(
     return NextResponse.redirect(new URL("/login", fallbackOrigin));
   }
 
-  const usage = await getUserUsageSummary(prisma, user.id, user.plan);
-  if (!usage.canConnectMoreChannels) {
+  const [usage, existingPlatformCount] = await Promise.all([
+    getUserUsageSummary(prisma, user.id, user.plan),
+    prisma.socialAccount.count({ where: { userId: user.id, platform } }),
+  ]);
+
+  // Allow OAuth flow if user has free slots OR already has connected accounts on this platform
+  // (callback already skips inserting new accounts beyond maxChannels while refreshing existing tokens).
+  if (!usage.canConnectMoreChannels && existingPlatformCount === 0) {
     const redirectUrl = new URL("/accounts", fallbackOrigin);
     redirectUrl.searchParams.set(
       "error",

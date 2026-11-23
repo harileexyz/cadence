@@ -240,6 +240,7 @@ export function createInstagramAdapter(
           redirect_uri: redirectUri,
           response_type: "code",
           override_default_response_type: "true",
+          auth_type: "rerequest",
           state,
         });
         return `${FB_OAUTH_DIALOG_URL}?${params.toString()}`;
