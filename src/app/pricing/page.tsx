@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Check, Crown, Loader2, Sparkles } from "lucide-react";
+import { AlertCircle, Check, CheckCircle2, Crown, Loader2, Sparkles } from "lucide-react";
+import { clearClientCache } from "@/lib/mobileCache";
 import { PLAN_SPECS, type UserUsageSummary } from "@/lib/plans";
 
 interface MeState {
@@ -15,10 +16,34 @@ interface MeState {
   usage: UserUsageSummary | null;
 }
 
+interface RazorpayCheckoutResponse {
+  razorpay_payment_id: string;
+  razorpay_order_id?: string;
+  razorpay_subscription_id?: string;
+  razorpay_signature: string;
+}
+
+function loadRazorpayScript(): Promise<boolean> {
+  if (typeof window === "undefined") return Promise.resolve(false);
+  if ((window as unknown as { Razorpay?: unknown }).Razorpay) {
+    return Promise.resolve(true);
+  }
+  return new Promise((resolve) => {
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.async = true;
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+}
+
 export default function PricingPage() {
   const [me, setMe] = useState<MeState>({ user: null, usage: null });
   const [loading, setLoading] = useState(true);
   const [switching, setSwitching] = useState<string | null>(null);
+  const [statusError, setStatusError] = useState<string | null>(null);
+  const [statusSuccess, setStatusSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     void (async () => {
@@ -35,16 +60,113 @@ export default function PricingPage() {
 
   async function switchPlan(targetPlan: "FREE" | "PRO") {
     setSwitching(targetPlan);
+    setStatusError(null);
+    setStatusSuccess(null);
+
     try {
+      if (targetPlan === "PRO") {
+        const checkoutRes = await fetch("/api/billing/razorpay/checkout", {
+          method: "POST",
+        });
+        const checkoutData = (await checkoutRes.json()) as {
+          mode?: "order" | "subscription";
+          keyId?: string;
+          orderId?: string;
+          subscriptionId?: string;
+          amount?: number;
+          currency?: string;
+          name?: string;
+          description?: string;
+          prefill?: { name?: string; email?: string };
+          error?: string;
+        };
+
+        if (checkoutRes.ok && checkoutData.keyId) {
+          const loaded = await loadRazorpayScript();
+          if (!loaded) {
+            throw new Error("Could not load Razorpay Checkout. Check your internet connection.");
+          }
+
+          const RazorpayCtor = (
+            window as unknown as {
+              Razorpay: new (opts: Record<string, unknown>) => { open: () => void };
+            }
+          ).Razorpay;
+
+          await new Promise<void>((resolve, reject) => {
+            const rzp = new RazorpayCtor({
+              key: checkoutData.keyId,
+              ...(checkoutData.mode === "subscription"
+                ? { subscription_id: checkoutData.subscriptionId }
+                : {
+                    order_id: checkoutData.orderId,
+                    amount: checkoutData.amount,
+                    currency: checkoutData.currency,
+                  }),
+              name: checkoutData.name || "Cadence",
+              description: checkoutData.description || "Creator Pro Plan",
+              prefill: checkoutData.prefill,
+              theme: { color: "#4f46e5" },
+              modal: {
+                ondismiss: () => resolve(),
+              },
+              handler: async (response: RazorpayCheckoutResponse) => {
+                try {
+                  const verifyRes = await fetch("/api/billing/razorpay/verify", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(response),
+                  });
+                  const verifyData = (await verifyRes.json()) as MeState & {
+                    error?: string;
+                  };
+                  if (!verifyRes.ok) {
+                    throw new Error(
+                      verifyData.error || "Payment verification failed."
+                    );
+                  }
+                  clearClientCache();
+                  setMe({ user: verifyData.user, usage: verifyData.usage });
+                  setStatusSuccess(
+                    "Welcome to Creator Pro! Unlimited channels and posts are now active."
+                  );
+                  resolve();
+                } catch (err) {
+                  reject(err);
+                }
+              },
+            });
+            rzp.open();
+          });
+          return;
+        }
+
+        // Fallback to /api/user/plan only for Founder / Beta Tester accounts if Razorpay isn't configured yet
+        if (checkoutRes.status !== 503) {
+          throw new Error(checkoutData.error || "Unable to start checkout.");
+        }
+      }
+
       const res = await fetch("/api/user/plan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ plan: targetPlan }),
       });
-      if (res.ok) {
-        const updated = (await res.json()) as MeState;
-        setMe(updated);
+      const data = (await res.json()) as MeState & { error?: string };
+      if (!res.ok) {
+        throw new Error(data.error || "Unable to update plan.");
       }
+      clearClientCache();
+      setMe({ user: data.user, usage: data.usage });
+      setStatusSuccess(
+        targetPlan === "PRO"
+          ? "Creator Pro activated!"
+          : "Switched back to Generous Free."
+      );
+    } catch (err) {
+      setStatusError(
+        err instanceof Error ? err.message : "Failed to process plan change."
+      );
     } finally {
       setSwitching(null);
     }
@@ -67,6 +189,20 @@ export default function PricingPage() {
           Connect up to 6 channels free forever, or unlock unlimited channels and posts with Creator Pro.
         </p>
       </div>
+
+      {statusError && (
+        <div className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          <span>{statusError}</span>
+        </div>
+      )}
+
+      {statusSuccess && (
+        <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
+          <CheckCircle2 className="h-4 w-4 shrink-0" />
+          <span>{statusSuccess}</span>
+        </div>
+      )}
 
       {me.user && usage && (
         <div className="rounded-2xl border border-indigo-100 bg-indigo-50/50 p-5">

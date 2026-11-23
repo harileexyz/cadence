@@ -19,6 +19,8 @@ const config: CapacitorConfig = {
       "*.youtube.com",
       "*.facebook.com",
       "*.instagram.com",
+      "checkout.razorpay.com",
+      "api.razorpay.com",
     ],
   },
   android: {
