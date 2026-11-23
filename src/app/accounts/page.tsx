@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { PlatformBadge } from "@/components/PlatformBadge";
 import { YOUTUBE_CATEGORIES, type AccountDefaults } from "@/lib/platforms/types";
-import { readClientCache, writeClientCache } from "@/lib/mobileCache";
+import { clearClientCache, readClientCache, writeClientCache } from "@/lib/mobileCache";
 
 interface AccountDTO {
   id: string;
@@ -117,8 +117,11 @@ function AccountsContent() {
   }, []);
 
   useEffect(() => {
+    if (connectedBanner) {
+      clearClientCache();
+    }
     void loadAccounts();
-  }, [loadAccounts]);
+  }, [loadAccounts, connectedBanner]);
 
   function openDefaultsEditor(acc: AccountDTO) {
     if (editingId === acc.id) {

@@ -388,9 +388,14 @@ export async function fetchInstagramEngagement(
         .filter((p) => p.mediaType === "VIDEO" || p.mediaType === "REELS")
         .slice(0, 15);
       if (videoPosts.length > 0) {
+        let lastInsightError: string | null = null;
         const insightResults = await Promise.allSettled(
           videoPosts.map(async (post) => {
-            for (const metric of ["views", "plays"]) {
+            for (const metric of [
+              "views",
+              "plays",
+              "ig_reels_aggregated_all_plays_count",
+            ]) {
               const insRes = await fetchFn(
                 `${graphBase}/${encodeURIComponent(
                   post.id
@@ -399,14 +404,24 @@ export async function fetchInstagramEngagement(
                 )}`,
                 { cache: "no-store" }
               );
-              if (!insRes || !insRes.ok) continue;
+              if (!insRes) continue;
+              if (!insRes.ok) {
+                if (!lastInsightError) {
+                  lastInsightError = `${insRes.status}: ${(await insRes.text().catch(() => "")).slice(0, 160)}`;
+                }
+                continue;
+              }
               const insData = (await insRes.json()) as {
                 data?: Array<{
                   name?: string;
                   values?: Array<{ value?: number }>;
+                  total_value?: { value?: number };
                 }>;
               };
-              const val = insData.data?.[0]?.values?.[0]?.value;
+              const firstMetric = insData.data?.[0];
+              const val =
+                firstMetric?.values?.[0]?.value ??
+                firstMetric?.total_value?.value;
               if (typeof val === "number" && Number.isFinite(val)) {
                 return { id: post.id, views: val };
               }
@@ -429,6 +444,10 @@ export async function fetchInstagramEngagement(
           base.totalViews = summedViews;
           base.recentPosts = base.recentPosts.map((p) =>
             viewsById.has(p.id) ? { ...p, views: viewsById.get(p.id)! } : p
+          );
+        } else if (lastInsightError) {
+          console.warn(
+            `[engagement] Instagram insights unavailable for ${account.displayName}: ${lastInsightError}`
           );
         }
       }
