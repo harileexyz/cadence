@@ -48,6 +48,17 @@ export default function PricingPage() {
   useEffect(() => {
     void (async () => {
       try {
+        if (typeof window !== "undefined") {
+          const checkout = new URLSearchParams(window.location.search).get(
+            "checkout"
+          );
+          if (checkout === "success") {
+            clearClientCache();
+            setStatusSuccess(
+              "Payment received! Your Creator Pro plan is activating (refresh in a few seconds if not updated yet)."
+            );
+          }
+        }
         const res = await fetch("/api/user/me");
         if (res.ok) {
           setMe((await res.json()) as MeState);
@@ -65,6 +76,23 @@ export default function PricingPage() {
 
     try {
       if (targetPlan === "PRO") {
+        // 1. Primary billing provider: Dodo Payments hosted checkout (UPI + Global Cards)
+        const dodoRes = await fetch("/api/billing/dodo/checkout", {
+          method: "POST",
+        });
+        const dodoData = (await dodoRes.json()) as {
+          checkoutUrl?: string;
+          error?: string;
+        };
+        if (dodoRes.ok && dodoData.checkoutUrl) {
+          window.location.assign(dodoData.checkoutUrl);
+          return;
+        }
+        if (dodoRes.status !== 503) {
+          throw new Error(dodoData.error || "Unable to start Dodo checkout.");
+        }
+
+        // 2. Secondary billing provider: Razorpay (if configured)
         const checkoutRes = await fetch("/api/billing/razorpay/checkout", {
           method: "POST",
         });

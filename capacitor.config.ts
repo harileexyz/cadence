@@ -21,6 +21,7 @@ const config: CapacitorConfig = {
       "*.instagram.com",
       "checkout.razorpay.com",
       "api.razorpay.com",
+      "*.dodopayments.com",
     ],
   },
   android: {
