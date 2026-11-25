@@ -125,52 +125,76 @@ export async function fetchYouTubeEngagement(
 
     const uploadsPlaylistId = channel.contentDetails?.relatedPlaylists?.uploads;
 
-    // 2. Fetch up to 25 most recent uploaded videos (1 unit) + their statistics (1 unit)
+    // 2. Fetch up to 200 most recent uploaded videos (paginated, max 50 per page) + their statistics
     if (uploadsPlaylistId) {
-      const plRes = await fetchFn(
-        `${YOUTUBE_API_BASE}/playlistItems?part=contentDetails&playlistId=${encodeURIComponent(
-          uploadsPlaylistId
-        )}&maxResults=25`,
-        { headers, cache: "no-store" }
-      );
-      if (plRes.ok) {
+      const videoIds: string[] = [];
+      let nextPageToken: string | undefined;
+      const MAX_YT_PAGES = 4;
+
+      for (let page = 0; page < MAX_YT_PAGES; page++) {
+        const pageParam = nextPageToken
+          ? `&pageToken=${encodeURIComponent(nextPageToken)}`
+          : "";
+        const plRes = await fetchFn(
+          `${YOUTUBE_API_BASE}/playlistItems?part=contentDetails&playlistId=${encodeURIComponent(
+            uploadsPlaylistId
+          )}&maxResults=50${pageParam}`,
+          { headers, cache: "no-store" }
+        );
+        if (!plRes.ok) break;
+
         const plData = (await plRes.json()) as {
+          nextPageToken?: string;
           items?: Array<{ contentDetails?: { videoId?: string } }>;
         };
-        const videoIds = (plData.items ?? [])
-          .map((i) => i.contentDetails?.videoId)
-          .filter((id): id is string => Boolean(id));
+        for (const item of plData.items ?? []) {
+          const vid = item.contentDetails?.videoId;
+          if (vid) videoIds.push(vid);
+        }
+        if (!plData.nextPageToken) break;
+        nextPageToken = plData.nextPageToken;
+      }
 
-        if (videoIds.length > 0) {
+      const uniqueVideoIds = Array.from(new Set(videoIds));
+      if (uniqueVideoIds.length > 0) {
+        const chunks: string[][] = [];
+        for (let i = 0; i < uniqueVideoIds.length; i += 50) {
+          chunks.push(uniqueVideoIds.slice(i, i + 50));
+        }
+
+        const collectedPosts: PostEngagement[] = [];
+        for (const chunk of chunks) {
           const vidRes = await fetchFn(
             `${YOUTUBE_API_BASE}/videos?part=snippet,statistics&id=${encodeURIComponent(
-              videoIds.join(",")
+              chunk.join(",")
             )}`,
             { headers, cache: "no-store" }
           );
-          if (vidRes.ok) {
-            const vidData = (await vidRes.json()) as {
-              items?: Array<{
-                id: string;
-                snippet?: {
-                  title?: string;
-                  description?: string;
-                  publishedAt?: string;
-                  thumbnails?: {
-                    high?: { url?: string };
-                    medium?: { url?: string };
-                    default?: { url?: string };
-                  };
-                };
-                statistics?: {
-                  viewCount?: string;
-                  likeCount?: string;
-                  commentCount?: string;
-                };
-              }>;
-            };
+          if (!vidRes.ok) continue;
 
-            base.recentPosts = (vidData.items ?? []).map((v) => ({
+          const vidData = (await vidRes.json()) as {
+            items?: Array<{
+              id: string;
+              snippet?: {
+                title?: string;
+                description?: string;
+                publishedAt?: string;
+                thumbnails?: {
+                  high?: { url?: string };
+                  medium?: { url?: string };
+                  default?: { url?: string };
+                };
+              };
+              statistics?: {
+                viewCount?: string;
+                likeCount?: string;
+                commentCount?: string;
+              };
+            }>;
+          };
+
+          for (const v of vidData.items ?? []) {
+            collectedPosts.push({
               id: v.id,
               platform: Platform.YOUTUBE,
               accountId: account.id,
@@ -189,9 +213,10 @@ export async function fetchYouTubeEngagement(
               views: toInt(v.statistics?.viewCount),
               likes: toInt(v.statistics?.likeCount),
               comments: toInt(v.statistics?.commentCount),
-            }));
+            });
           }
         }
+        base.recentPosts = collectedPosts;
       }
     }
 
@@ -296,32 +321,43 @@ export async function fetchInstagramEngagement(
     base.followersCount = toInt(profile.followers_count);
     base.totalPosts = toInt(profile.media_count);
 
-    // 2. Recent media posts with like_count and comments_count
-    const mediaRes = await fetchFn(
+    // 2. Recent media posts with like_count and comments_count (paginated up to 100)
+    type IgMediaItem = {
+      id: string;
+      caption?: string;
+      media_type?: string;
+      media_url?: string;
+      thumbnail_url?: string;
+      permalink?: string;
+      timestamp?: string;
+      like_count?: number;
+      comments_count?: number;
+    };
+
+    const rawMedia: IgMediaItem[] = [];
+    let nextMediaUrl: string | undefined =
       `${graphBase}/${encodeURIComponent(
         igId
-      )}/media?fields=id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count&limit=25&access_token=${encodeURIComponent(
+      )}/media?fields=id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count&limit=50&access_token=${encodeURIComponent(
         accessToken
-      )}`,
-      { cache: "no-store" }
-    );
+      )}`;
 
-    if (mediaRes.ok) {
+    const MAX_IG_PAGES = 2;
+    for (let page = 0; page < MAX_IG_PAGES && nextMediaUrl; page++) {
+      const mediaRes = await fetchFn(nextMediaUrl, { cache: "no-store" });
+      if (!mediaRes.ok) break;
       const mediaData = (await mediaRes.json()) as {
-        data?: Array<{
-          id: string;
-          caption?: string;
-          media_type?: string;
-          media_url?: string;
-          thumbnail_url?: string;
-          permalink?: string;
-          timestamp?: string;
-          like_count?: number;
-          comments_count?: number;
-        }>;
+        data?: IgMediaItem[];
+        paging?: { next?: string };
       };
+      if (mediaData.data) {
+        rawMedia.push(...mediaData.data);
+      }
+      nextMediaUrl = mediaData.paging?.next;
+    }
 
-      base.recentPosts = (mediaData.data ?? []).map((m) => ({
+    if (rawMedia.length > 0) {
+      base.recentPosts = rawMedia.map((m) => ({
         id: m.id,
         platform: Platform.INSTAGRAM,
         accountId: account.id,
@@ -383,64 +419,76 @@ export async function fetchInstagramEngagement(
         }
       }
 
-      // 4. Best-effort Reel/Video views via Instagram Insights API (requires instagram_manage_insights)
-      const videoPosts = base.recentPosts
-        .filter((p) => p.mediaType === "VIDEO" || p.mediaType === "REELS")
-        .slice(0, 15);
-      if (videoPosts.length > 0) {
+      // 4. Best-effort post views via Instagram Insights API (requires instagram_manage_insights)
+      // Graph API v22 supports `views` across Reels, Video, Image, and Carousel posts.
+      const insightTargets = base.recentPosts.slice(0, 50);
+      if (insightTargets.length > 0) {
         let lastInsightError: string | null = null;
-        const insightResults = await Promise.allSettled(
-          videoPosts.map(async (post) => {
-            for (const metric of [
-              "views",
-              "plays",
-              "ig_reels_aggregated_all_plays_count",
-            ]) {
-              const insRes = await fetchFn(
-                `${graphBase}/${encodeURIComponent(
-                  post.id
-                )}/insights?metric=${metric}&access_token=${encodeURIComponent(
-                  accessToken
-                )}`,
-                { cache: "no-store" }
-              );
-              if (!insRes) continue;
-              if (!insRes.ok) {
-                if (!lastInsightError) {
-                  lastInsightError = `${insRes.status}: ${(await insRes.text().catch(() => "")).slice(0, 160)}`;
-                }
-                continue;
-              }
-              const insData = (await insRes.json()) as {
-                data?: Array<{
-                  name?: string;
-                  values?: Array<{ value?: number }>;
-                  total_value?: { value?: number };
-                }>;
-              };
-              const firstMetric = insData.data?.[0];
-              const val =
-                firstMetric?.values?.[0]?.value ??
-                firstMetric?.total_value?.value;
-              if (typeof val === "number" && Number.isFinite(val)) {
-                return { id: post.id, views: val };
-              }
-            }
-            return null;
-          })
-        );
-
-        let summedViews = 0;
-        let hasAnyViews = false;
         const viewsById = new Map<string, number>();
-        for (const r of insightResults) {
-          if (r.status === "fulfilled" && r.value) {
-            viewsById.set(r.value.id, r.value.views);
-            summedViews += r.value.views;
-            hasAnyViews = true;
+
+        const fetchPostViews = async (post: PostEngagement) => {
+          const metrics =
+            post.mediaType === "VIDEO" || post.mediaType === "REELS"
+              ? [
+                  "views",
+                  "plays",
+                  "ig_reels_aggregated_all_plays_count",
+                  "video_views",
+                  "impressions",
+                ]
+              : ["views", "impressions", "reach"];
+
+          for (const metric of metrics) {
+            const url = `${graphBase}/${encodeURIComponent(
+              post.id
+            )}/insights?metric=${metric}&access_token=${encodeURIComponent(
+              accessToken
+            )}`;
+            let insRes = await fetchFn(url, { cache: "no-store" });
+            if (insRes && (insRes.status === 429 || insRes.status >= 500)) {
+              insRes = await fetchFn(url, { cache: "no-store" });
+            }
+            if (!insRes) continue;
+            if (!insRes.ok) {
+              if (!lastInsightError) {
+                lastInsightError = `${insRes.status}: ${(await insRes.text().catch(() => "")).slice(0, 160)}`;
+              }
+              continue;
+            }
+            const insData = (await insRes.json()) as {
+              data?: Array<{
+                name?: string;
+                values?: Array<{ value?: number }>;
+                total_value?: { value?: number };
+              }>;
+            };
+            const firstMetric = insData.data?.[0];
+            const val =
+              firstMetric?.values?.[0]?.value ??
+              firstMetric?.total_value?.value;
+            if (typeof val === "number" && Number.isFinite(val)) {
+              return { id: post.id, views: val };
+            }
+          }
+          return null;
+        };
+
+        const BATCH_SIZE = 5;
+        for (let i = 0; i < insightTargets.length; i += BATCH_SIZE) {
+          const batch = insightTargets.slice(i, i + BATCH_SIZE);
+          const batchResults = await Promise.allSettled(
+            batch.map((post) => fetchPostViews(post))
+          );
+          for (const r of batchResults) {
+            if (r.status === "fulfilled" && r.value) {
+              viewsById.set(r.value.id, r.value.views);
+            }
           }
         }
-        if (hasAnyViews) {
+
+        if (viewsById.size > 0) {
+          let summedViews = 0;
+          for (const v of viewsById.values()) summedViews += v;
           base.totalViews = summedViews;
           base.recentPosts = base.recentPosts.map((p) =>
             viewsById.has(p.id) ? { ...p, views: viewsById.get(p.id)! } : p

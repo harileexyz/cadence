@@ -151,12 +151,14 @@ export function computeScopedSummary(
   let engagementRateLabel = "Interactions / views";
 
   if (recentViews > 0) {
-    engagementRate = ((recentLikes + recentComments) / recentViews) * 100;
-    engagementRateLabel = "Likes & comments / views";
+    const likesWithViews = postsWithViews.reduce((s, p) => s + p.likes, 0);
+    const commentsWithViews = postsWithViews.reduce((s, p) => s + p.comments, 0);
+    engagementRate = ((likesWithViews + commentsWithViews) / recentViews) * 100;
+    engagementRateLabel = "(Likes + comments) ÷ views";
   } else if (followers > 0 && posts.length > 0) {
     const avgInteractions = (recentLikes + recentComments) / posts.length;
     engagementRate = (avgInteractions / followers) * 100;
-    engagementRateLabel = "Avg interactions / followers";
+    engagementRateLabel = "Avg interactions ÷ followers";
   }
 
   let topPost: PostEngagementDTO | null = null;

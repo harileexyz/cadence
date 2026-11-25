@@ -932,16 +932,27 @@ export default function EngagementPage() {
             {/* Posts Performance (2 cols) */}
             <section className="min-w-0 space-y-3 lg:col-span-2">
               <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <Sparkles className="h-4 w-4 text-indigo-600" />
                   <h2 className="text-sm font-semibold text-slate-900">
                     {activeChannel
                       ? `${activeChannel.displayName} Posts`
                       : "Recent Posts Performance"}{" "}
                     <span className="font-normal text-slate-400">
-                      ({filteredPosts.length})
+                      (
+                      {!postQuery.trim() &&
+                      scopedSummary.totalPosts > scopedPosts.length
+                        ? `${filteredPosts.length} of ${scopedSummary.totalPosts}`
+                        : filteredPosts.length}
+                      )
                     </span>
                   </h2>
+                  <span
+                    className="hidden text-[11px] text-slate-400 sm:inline"
+                    title="Post engagement rate formula"
+                  >
+                    · Eng % = (likes + comments) ÷ views
+                  </span>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
@@ -1109,12 +1120,19 @@ export default function EngagementPage() {
                             <MessageCircle className="h-3.5 w-3.5 text-amber-500" />
                             {formatCompactNumber(post.comments)}
                           </span>
-                          {rate !== null && (
+                          {rate !== null ? (
                             <span
                               className="rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-semibold text-indigo-700"
-                              title="Engagement rate"
+                              title={`Engagement rate: (${post.likes} likes + ${post.comments} comments) ÷ ${post.views} views = ${formatPercent(rate)}`}
                             >
                               {formatPercent(rate)}
+                            </span>
+                          ) : (
+                            <span
+                              className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-400"
+                              title="Engagement % unavailable because view count was not returned by platform API"
+                            >
+                              —
                             </span>
                           )}
                         </div>

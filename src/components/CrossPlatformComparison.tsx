@@ -213,15 +213,27 @@ export function CrossPlatformComparison({
 
               {/* Engagement Split Bar */}
               <div className="mt-3 border-t border-slate-100 pt-3">
-                <div className="flex items-center justify-between text-[11px] font-medium text-slate-500">
+                <div
+                  className="flex items-center justify-between text-[11px] font-medium text-slate-500"
+                  title="Share of combined likes + comments between YouTube and Instagram for this post"
+                >
                   <span>
-                    YouTube <strong className="text-rose-600">{pair.ytEngagementShare}%</strong>
+                    YouTube{" "}
+                    <strong className="text-rose-600">
+                      {pair.ytEngagementShare}%
+                    </strong>{" "}
+                    <span className="text-slate-400">
+                      ({pair.youtube.likes + pair.youtube.comments})
+                    </span>
                   </span>
                   <span className="text-slate-600">
                     {formatCompactNumber(pair.combinedLikes)} likes ·{" "}
-                    {formatCompactNumber(pair.combinedComments)} comments total
+                    {formatCompactNumber(pair.combinedComments)} comments
                   </span>
                   <span>
+                    <span className="text-slate-400">
+                      ({pair.instagram.likes + pair.instagram.comments})
+                    </span>{" "}
                     <strong className="text-fuchsia-600">{igShare}%</strong> IG
                   </span>
                 </div>
